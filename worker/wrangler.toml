@@ -1,0 +1,12 @@
+name = "iotsens-palacio-congresos"
+main = "worker.js"
+compatibility_date = "2026-07-01"
+
+[vars]
+# Cuando la pantalla ya este publicada, cambia * por el dominio real
+# (p.ej. "https://josehino.github.io") para que nadie mas use el proxy.
+ORIGEN_PERMITIDO = "*"
+SEGUNDOS_CACHE = "20"
+
+# La clave NO va aqui. Se sube como secreto:
+#   npx wrangler secret put IOTSENS_API_KEY

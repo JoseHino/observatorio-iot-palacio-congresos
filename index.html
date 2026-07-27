@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es" data-tema="oscuro">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Observatorio IoT · Palacio de Congresos de Marbella</title>
+    <meta name="description" content="Panel público en tiempo real de los sensores del Palacio de Congresos de Marbella." />
+    <!-- Mientras la pantalla esté en modo demostración no debe indexarse:
+         los valores son simulados y no deben citarse como reales. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/estilo.css" />
+  </head>
+  <body>
+    <header class="cabecera">
+      <div class="marca">
+        <div class="emblema">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 20h18" />
+            <path d="M5 20V9.5L12 5l7 4.5V20" />
+            <path d="M9.5 20v-5h5v5" />
+          </svg>
+        </div>
+        <div>
+          <h1 id="titulo">Palacio de Congresos y Exposiciones</h1>
+          <p id="subtitulo">Adolfo Suárez · Marbella</p>
+        </div>
+      </div>
+
+      <div class="relleno"></div>
+
+      <div class="estado" id="estado" data-estado="vivo">
+        <span class="punto"></span>
+        <span id="estado-texto">Conectando…</span>
+      </div>
+
+      <div class="reloj">
+        <div class="hora" id="hora">--:--</div>
+        <div class="fecha" id="fecha"></div>
+      </div>
+    </header>
+
+    <div class="aviso-pantalla oculto" id="aviso">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3.5 2.8 19.5h18.4L12 3.5z" />
+        <path d="M12 10v4" />
+        <path d="M12 17.2v.1" />
+      </svg>
+      <span id="aviso-texto"></span>
+    </div>
+
+    <main class="tablero">
+      <div class="columna indicadores" id="indicadores">
+        <div class="vacio">Cargando sensores…</div>
+      </div>
+
+      <aside class="columna">
+        <section class="panel">
+          <h2>Estado de la red de sensores</h2>
+          <div class="resumen" id="resumen"></div>
+        </section>
+
+        <section class="panel grafica">
+          <h2>Evolución</h2>
+          <div class="titulo-grafica" id="titulo-grafica">Cargando…</div>
+          <div style="color: var(--texto-suave); font-weight: 500; font-size: calc(var(--u) * 1.35)" id="subtitulo-grafica"></div>
+          <div class="lienzo"><canvas id="lienzo-grafica"></canvas></div>
+          <div class="puntos-carrusel" id="puntos-carrusel"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Indicadores a vigilar</h2>
+          <ul class="lista-avisos" id="vigilancia"></ul>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="pie-pagina">
+      <span>Fuente: plataforma IoTsens · Palacio de Congresos de Marbella</span>
+      <span class="relleno"></span>
+      <span id="paginacion"></span>
+      <span id="sello"></span>
+      <div class="barra-refresco"><i id="barra"></i></div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="assets/config.js"></script>
+    <script src="assets/demo.js"></script>
+    <script src="assets/app.js"></script>
+  </body>
+</html>
