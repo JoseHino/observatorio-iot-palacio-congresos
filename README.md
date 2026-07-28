@@ -69,17 +69,17 @@ Comprobación rápida: abrir esa URL en el navegador debe responder
 El plan gratuito de Cloudflare da 100.000 peticiones al día; una pantalla
 refrescando cada minuto gasta unas 25.000 al mes.
 
-### 3. Rellenar `assets/config.js`
+### 3. Rellenar `src/lib/config.ts`
 
-```js
-proxy: 'https://iotsens-palacio-congresos.xxx.workers.dev',
-tenantUuid: '...',
-organizationUuid: '...',
-assetUuid: '...',
+```ts
+proxy: "https://iotsens-palacio-congresos.xxx.workers.dev",
+tenantUuid: "...",
+organizationUuid: "...",
+assetUuid: "...",
 ```
 
-Al recargar, el aviso amarillo desaparece y el indicador de la cabecera pasa a
-**Datos en vivo**.
+Al recompilar (`npm run build`), el aviso amarillo desaparece y el indicador de
+la cabecera pasa a **Datos en vivo**.
 
 ### 4. Cerrar el proxy (recomendado, una vez publicada la pantalla)
 
@@ -102,7 +102,7 @@ de la pantalla y volver a desplegar. Así el proxy solo atiende a esa web.
 - **Si la plataforma se cae**, la pantalla no se queda en blanco: avisa y sigue
   mostrando datos de demostración hasta que vuelva.
 
-### Ajustes en `assets/config.js`
+### Ajustes en `src/lib/config.ts`
 
 | Clave | Qué controla |
 |---|---|
@@ -127,7 +127,7 @@ mantenimiento del Palacio.
 | `R` | Forzar recarga de datos |
 | `T` | Alternar tema claro / oscuro |
 
-También por URL: `?tema=claro`, `?demo=1`.
+También por URL: `?tema=oscuro`, `?demo=1`. El tema claro es el de por defecto.
 
 ---
 
@@ -146,14 +146,47 @@ cortes de red.
 
 ---
 
+## Desarrollo
+
+La pantalla es una aplicación **React + TypeScript + Tailwind 4**, con los
+componentes de interfaz de **shadcn/ui**. Requiere compilación: ya no basta con
+abrir el HTML.
+
+```powershell
+npm install
+npm run dev      # servidor de desarrollo en http://localhost:5173
+npm run build    # genera dist/ , que es lo que se publica
+npm run preview  # sirve dist/ para comprobarlo antes de publicar
+```
+
+---
+
 ## Estructura
 
 ```
-index.html            la pantalla
-assets/config.js      configuración y diccionario de sensores  ← se toca esto
-assets/app.js         lectura de la API, clasificación y pintado
-assets/estilo.css     estilos (tema oscuro y claro)
-assets/demo.js        datos simulados del modo demostración
-worker/worker.js      proxy de solo lectura con la clave
-descubrir.mjs         inventario de sensores de la instalación
+index.html                      arranque de la aplicación
+src/lib/config.ts               configuración y diccionario de sensores  ← se toca esto
+src/lib/api.ts                  cliente de IoTsens (a través del proxy)
+src/lib/demo.ts                 datos simulados del modo demostración
+src/lib/formato.ts              clasificación por nombre, umbrales y formato de cifras
+src/lib/tipos.ts                tipos compartidos
+src/hooks/useObservatorio.ts    ciclo de refresco y caída a demostración
+src/hooks/usePantalla.ts        reloj, tema, atajos de teclado y rotaciones
+src/components/                 tarjetas, rejilla paginada, gráfica y paneles
+src/components/ui/              componentes de shadcn/ui + la cabecera (hero-195)
+src/index.css                   sistema de diseño: tokens de color y tema claro/oscuro
+worker/worker.js                proxy de solo lectura con la clave
+descubrir.mjs                   inventario de sensores de la instalación
 ```
+
+### Sistema de diseño
+
+Los colores, radios y tipografía viven como variables CSS en `src/index.css`,
+en dos bloques: `:root` (tema claro, el de por defecto) y `.dark`. Cambiar la
+paleta es editar esas variables; no hay colores incrustados en los componentes.
+
+Los tonos de estado tienen dos variantes a propósito: `--ok` / `--aviso` /
+`--alerta` para **texto** (contraste 4.5:1 sobre la tarjeta) y `--ok-trazo` /
+`--aviso-trazo` / `--alerta-trazo`, más saturados, para **trazos de gráfica**,
+donde el requisito es 3:1. El estado nunca se transmite solo con color: cada
+tarjeta lleva además su etiqueta ("Óptimo", "Aceptable", "Fuera de rango").

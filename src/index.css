@@ -1,0 +1,209 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* El tema se conmuta con la clase .dark en <html> (tecla T). */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* --- Tokens semánticos de shadcn --- */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* --- Estados del observatorio (semáforo) ---
+     Nunca se usan solos: siempre acompañados de etiqueta de texto,
+     porque el color por sí solo no debe transmitir información. */
+  --color-ok: var(--ok);
+  --color-aviso: var(--aviso);
+  --color-alerta: var(--alerta);
+  --color-neutro: var(--neutro);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --font-sans: "Montserrat", "Segoe UI", system-ui, sans-serif;
+
+  /* El haz animado del BorderBeam: el prompt lo usaba pero no lo definía. */
+  --animate-border-beam: border-beam calc(var(--duration) * 1s) infinite linear;
+  --animate-latido: latido 2.4s ease-out infinite;
+}
+
+/* ------------------------------------------------------------------
+   Tema claro (por defecto). Se mantiene la identidad de la pantalla
+   anterior: azul Marbella y fondo de cielo mediterráneo.
+   ------------------------------------------------------------------ */
+:root {
+  --background: #e8f3fb;
+  --foreground: #123350;
+  --card: #ffffff;
+  --card-foreground: #123350;
+  --popover: #ffffff;
+  --popover-foreground: #123350;
+  --primary: #1a8fe3;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f8fe;
+  --secondary-foreground: #123350;
+  --muted: #f1f8fe;
+  --muted-foreground: #5f7c96;
+  --accent: #f1f8fe;
+  --accent-foreground: #123350;
+  --destructive: #f15b62;
+  --destructive-foreground: #ffffff;
+  --border: #e4edf6;
+  --input: #e4edf6;
+  --ring: #1a8fe3;
+
+  /* Tonos de texto: oscurecidos respecto a la versión anterior para que
+     la etiqueta de estado cumpla 4.5:1 sobre tarjeta blanca. */
+  --ok: #12855c;
+  --aviso: #9a6200;
+  --alerta: #c92a34;
+  --neutro: #5f7c96;
+
+  /* Variantes saturadas para trazos de gráfica y puntos, donde el
+     requisito es 3:1 sobre el fondo y no 4.5:1 de texto. */
+  --ok-trazo: #1fbd82;
+  --aviso-trazo: #f4a723;
+  --alerta-trazo: #f15b62;
+
+  --sombra: 0 6px 20px rgba(23, 82, 130, 0.08);
+  --radius: 14px;
+
+  /* Unidad vertical: toda la pantalla escala con el alto del monitor. */
+  --u: 1vh;
+}
+
+.dark {
+  --background: #071726;
+  --foreground: #f1f6fb;
+  --card: #0e2437;
+  --card-foreground: #f1f6fb;
+  --popover: #0e2437;
+  --popover-foreground: #f1f6fb;
+  --primary: #2e8be6;
+  --primary-foreground: #ffffff;
+  --secondary: #122d45;
+  --secondary-foreground: #f1f6fb;
+  --muted: #122d45;
+  --muted-foreground: #a3b8cc;
+  --accent: #122d45;
+  --accent-foreground: #f1f6fb;
+  --destructive: #ec5a63;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #63b3ff;
+
+  --ok: #35c99a;
+  --aviso: #f0a92c;
+  --alerta: #ff8189;
+  --neutro: #93aac1;
+
+  --ok-trazo: #35c99a;
+  --aviso-trazo: #f0a92c;
+  --alerta-trazo: #ec5a63;
+
+  --sombra: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    /* Cielo mediterráneo con un toque cálido de sol arriba a la derecha. */
+    background-image:
+      radial-gradient(120% 95% at 100% 0%, #fff4e4 0%, rgba(255, 244, 228, 0) 42%),
+      radial-gradient(120% 100% at 0% 0%, #dcefff 0%, #e8f3fb 58%);
+    background-attachment: fixed;
+    font-size: clamp(13px, 1.15vh, 20px);
+    overflow: hidden;
+  }
+
+  .dark body {
+    background-image: radial-gradient(120% 90% at 12% 0%, #0c2338 0%, #071726 62%);
+  }
+
+  /* Las cifras deben tener ancho fijo: si no, el número "baila" en cada
+     refresco y en una pantalla pública se nota mucho. */
+  .cifras {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* En pantalla estrecha o vertical la página fluye y puede desplazarse. */
+  @media (max-aspect-ratio: 1/1), (max-width: 1100px) {
+    body {
+      overflow: auto;
+    }
+  }
+}
+
+@keyframes border-beam {
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+/* Barra del pie: avanza durante el intervalo de refresco. */
+@keyframes barra {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes latido {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  70% {
+    box-shadow: 0 0 0 0.7em rgba(0, 0, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+/* Una pantalla de señalética se mira, no se toca: si el sistema pide
+   menos movimiento, se congela todo salvo la actualización del dato. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
