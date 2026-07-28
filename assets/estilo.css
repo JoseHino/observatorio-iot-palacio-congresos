@@ -21,14 +21,44 @@
 }
 
 :root[data-tema='claro'] {
-  --fondo: #eef3f9;
+  --fondo: #e8f3fb;
   --fondo-alto: #ffffff;
   --panel: #ffffff;
-  --panel-alto: #f4f7fb;
-  --linea: #dbe4ee;
-  --texto: #0d2136;
-  --texto-suave: #5c748d;
-  --neutro: #8296ab;
+  --panel-alto: #f1f8fe;
+  --linea: #e4edf6;
+  --texto: #123350;
+  --texto-suave: #5f7c96;
+  --azul: #1a8fe3;
+  --azul-claro: #4fb0ff;
+  --ok: #1fbd82;
+  --aviso: #f4a723;
+  --alerta: #f15b62;
+  --neutro: #90a4b8;
+  --sombra: 0 6px 20px rgba(23, 82, 130, 0.08);
+}
+
+/* Fondo alegre y luminoso para el tema claro: cielo mediterráneo con un
+   toque cálido de sol en la esquina superior derecha. */
+:root[data-tema='claro'] body {
+  background:
+    radial-gradient(120% 95% at 100% 0%, #fff4e4 0%, rgba(255, 244, 228, 0) 42%),
+    radial-gradient(120% 100% at 0% 0%, #dcefff 0%, #e8f3fb 58%);
+}
+
+/* En claro, las tarjetas y paneles flotan con sombra suave en vez de solo borde. */
+:root[data-tema='claro'] .tarjeta,
+:root[data-tema='claro'] .panel {
+  box-shadow: var(--sombra);
+}
+
+:root[data-tema='claro'] .cabecera,
+:root[data-tema='claro'] .pie-pagina {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+:root[data-tema='claro'] .estado {
+  box-shadow: var(--sombra);
 }
 
 * {
