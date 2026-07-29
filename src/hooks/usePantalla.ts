@@ -28,7 +28,22 @@ interface Atajos {
   anteriorPagina: () => void
   refrescar: () => void
   alternarTema: () => void
+  alternarVista: () => void
 }
+
+/**
+ * Qué se ve: el carrusel de señalética (por defecto) o el cuadro de mando
+ * completo, para mantenimiento. Se fija por URL (?vista=panel) y se alterna
+ * con la tecla P.
+ */
+export function useVista(): [Vista, () => void] {
+  const [vista, setVista] = useState<Vista>(() =>
+    new URLSearchParams(location.search).get("vista") === "panel" ? "panel" : "carrusel",
+  )
+  return [vista, () => setVista((v) => (v === "carrusel" ? "panel" : "carrusel"))]
+}
+
+export type Vista = "carrusel" | "panel"
 
 /**
  * Atajos de teclado para operar la pantalla desde el mando o un teclado
@@ -60,6 +75,9 @@ export function useAtajos(acciones: Atajos): void {
           break
         case "t":
           a.alternarTema()
+          break
+        case "p":
+          a.alternarVista()
           break
         case "f":
           if (document.fullscreenElement) void document.exitFullscreen()

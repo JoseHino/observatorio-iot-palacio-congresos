@@ -12,11 +12,14 @@ import { CONFIG, GRUPOS } from "@/lib/config"
 import { clasificar, evaluar } from "@/lib/formato"
 import type { EstadoConexion, Kpi, Punto, Sensor } from "@/lib/tipos"
 
+/** Series diarias de indicadores agregados, por su papel en la pantalla. */
+export type PapelSerie = "afluencia" | "agua"
+
 interface Observatorio {
   sensores: Sensor[]
   kpis: Kpi[]
-  /** Serie diaria de accesos al recinto, para la gráfica de afluencia. */
-  serieAforo: Punto[]
+  /** Series de varios días de los KPI destacados (afluencia y agua). */
+  seriesKpi: Map<PapelSerie, Punto[]>
   historicos: Map<string, Punto[]>
   conexion: EstadoConexion
   aviso: string
@@ -50,10 +53,13 @@ function elegirKpiAfluencia(kpis: Kpi[]): Kpi | undefined {
   )
 }
 
+const elegirKpiAgua = (kpis: Kpi[]): Kpi | undefined =>
+  kpis.find((k) => k.familia === "agua" && k.periodo === "DAILY")
+
 export function useObservatorio(): Observatorio {
   const [sensores, setSensores] = useState<Sensor[]>([])
   const [kpis, setKpis] = useState<Kpi[]>([])
-  const [serieAforo, setSerieAforo] = useState<Punto[]>([])
+  const [seriesKpi, setSeriesKpi] = useState<Map<PapelSerie, Punto[]>>(new Map())
   const [historicos, setHistoricos] = useState<Map<string, Punto[]>>(new Map())
   const [conexion, setConexion] = useState<EstadoConexion>("cargando")
   const [aviso, setAviso] = useState("")
@@ -107,21 +113,24 @@ export function useObservatorio(): Observatorio {
       setConexion(modoDemo.current ? "demo" : "vivo")
       setInicioCiclo(Date.now())
 
-      // La afluencia diaria se pide aparte y sin bloquear el resto: es la
-      // única serie que mira varios días atrás.
-      const aforo = elegirKpiAfluencia(indicadores)
-      if (aforo) {
-        leerHistoricoKpi(
-          aforo,
-          hasta - CONFIG.diasHistoricoKpi * 86400000,
-          hasta,
-          modoDemo.current,
-        )
-          .then(setSerieAforo)
-          .catch(() => setSerieAforo([]))
-      } else {
-        setSerieAforo([])
-      }
+      // Las series de varios días se piden aparte y sin bloquear el resto:
+      // son las únicas que miran más allá de las últimas 24 h.
+      const desdeDias = hasta - CONFIG.diasHistoricoKpi * 86400000
+      const elegidos: Array<[PapelSerie, Kpi | undefined]> = [
+        ["afluencia", elegirKpiAfluencia(indicadores)],
+        ["agua", elegirKpiAgua(indicadores)],
+      ]
+
+      void Promise.all(
+        elegidos.map(async ([papel, kpi]) => {
+          if (!kpi) return [papel, [] as Punto[]] as const
+          try {
+            return [papel, await leerHistoricoKpi(kpi, desdeDias, hasta, modoDemo.current)] as const
+          } catch {
+            return [papel, [] as Punto[]] as const
+          }
+        }),
+      ).then((series) => setSeriesKpi(new Map(series)))
     } catch (e) {
       const mensaje = e instanceof Error ? e.message : String(e)
       console.error("[observatorio]", e)
@@ -164,7 +173,7 @@ export function useObservatorio(): Observatorio {
   return {
     sensores,
     kpis,
-    serieAforo,
+    seriesKpi,
     historicos,
     conexion,
     aviso,

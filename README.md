@@ -111,6 +111,21 @@ de la pantalla y volver a desplegar. Así el proxy solo atiende a esa web.
 
 ## La pantalla
 
+Hay **dos vistas**. La de señalética es la que se ve por defecto:
+
+### Carrusel (por defecto)
+
+Cinco diapositivas a pantalla completa que rotan cada 15 s, pensadas para
+leerse de lejos: **Afluencia**, **Confort en las salas**, **Calidad del aire**,
+**El tiempo en el Palacio** y **Consumo de agua**.
+
+Una diapositiva cuyos sensores dejen de reportar no se enseña vacía: se salta
+sola y el resto sigue rotando.
+
+### Cuadro de mando (tecla `P`, o `?vista=panel`)
+
+La vista densa con los 164 indicadores paginados, para mantenimiento.
+
 - **Banda de cifras del día** (arriba): entradas por la puerta principal y por
   el prehall, tránsito registrado y consumo de agua. Salen de los KPI.
 - **Se adapta sola a los sensores que haya.** No hay ninguna lista fija: lee el
@@ -137,7 +152,9 @@ de la pantalla y volver a desplegar. Así el proxy solo atiende a esa web.
 |---|---|
 | `segundosRefresco` | Cada cuánto se piden datos nuevos (por defecto 60 s). |
 | `horasHistorico` | Ventana de las gráficas (24 h). |
-| `segundosCarrusel` / `segundosPagina` | Ritmo de rotación de gráficas e indicadores. |
+| `segundosDiapositiva` | Cuánto dura cada diapositiva del carrusel (15 s). |
+| `segundosCarrusel` / `segundosPagina` | Ritmo de rotación de gráficas e indicadores en el cuadro de mando. |
+| `diasHistoricoKpi` | Días de las gráficas de afluencia y agua (14). |
 | `minutosSinDatos` | Cuándo se marca un sensor como "sin señal" (90 min). |
 | `modoDemo` | `'auto'`, `'si'` (forzar demo) o `'no'` (nunca demo). |
 
@@ -155,8 +172,10 @@ mantenimiento del Palacio.
 | `↑` / `↓` | Cambiar de página de indicadores |
 | `R` | Forzar recarga de datos |
 | `T` | Alternar tema claro / oscuro |
+| `P` | Cambiar entre carrusel y cuadro de mando |
 
-También por URL: `?tema=oscuro`, `?demo=1`. El tema claro es el de por defecto.
+También por URL: `?vista=panel`, `?tema=oscuro`, `?demo=1`. Por defecto:
+carrusel y tema claro.
 
 ---
 
@@ -201,6 +220,7 @@ src/lib/formato.ts              clasificación por nombre, umbrales y formato de
 src/lib/tipos.ts                tipos compartidos
 src/hooks/useObservatorio.ts    ciclo de refresco y caída a demostración
 src/hooks/usePantalla.ts        reloj, tema, atajos de teclado y rotaciones
+src/components/carrusel/        las cinco diapositivas de señalética  ← lo que se ve
 src/components/                 tarjetas, rejilla paginada, gráfica y paneles
 src/components/ui/              componentes de shadcn/ui + la cabecera (hero-195)
 src/index.css                   sistema de diseño: tokens de color y tema claro/oscuro

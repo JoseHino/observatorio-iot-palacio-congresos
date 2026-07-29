@@ -25,6 +25,8 @@ export const CONFIG = {
   maxGraficas: 4,
   segundosCarrusel: 20,
   segundosPagina: 18,
+  /** Cuánto dura cada diapositiva del carrusel de señalética. */
+  segundosDiapositiva: 15,
   /** A partir de aquí un sensor se marca como "sin señal". */
   minutosSinDatos: 90,
 

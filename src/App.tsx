@@ -2,6 +2,7 @@ import { TriangleAlert } from "lucide-react"
 import { useCallback, useMemo, useState, type ReactNode } from "react"
 
 import { BandaCifras } from "@/components/BandaCifras"
+import { Carrusel } from "@/components/carrusel/Carrusel"
 import { GraficaCarrusel } from "@/components/GraficaCarrusel"
 import { PanelAforo } from "@/components/PanelAforo"
 import { PanelResumen } from "@/components/PanelResumen"
@@ -9,7 +10,7 @@ import { RejillaSensores } from "@/components/RejillaSensores"
 import { Card } from "@/components/ui/card"
 import { Hero195 } from "@/components/ui/hero-195"
 import { useObservatorio } from "@/hooks/useObservatorio"
-import { useAtajos, useReloj, useRotacion, useTema } from "@/hooks/usePantalla"
+import { useAtajos, useReloj, useRotacion, useTema, useVista } from "@/hooks/usePantalla"
 import { CONFIG } from "@/lib/config"
 import { hora } from "@/lib/formato"
 import type { Sensor } from "@/lib/tipos"
@@ -39,10 +40,11 @@ function Panel({ titulo, children, className }: {
 }
 
 export default function App() {
-  const { sensores, kpis, historicos, conexion, aviso, inicioCiclo, actualizar } =
+  const { sensores, kpis, seriesKpi, historicos, conexion, aviso, inicioCiclo, actualizar } =
     useObservatorio()
   const ahora = useReloj()
   const [, alternarTema] = useTema()
+  const [vista, alternarVista] = useVista()
   const [totalPaginas, setTotalPaginas] = useState(1)
 
   const candidatos: Sensor[] = useMemo(
@@ -68,10 +70,26 @@ export default function App() {
     anteriorPagina: () => moverPagina(-1),
     refrescar: actualizar,
     alternarTema,
+    alternarVista,
   })
 
   const alTotalPaginas = useCallback((n: number) => setTotalPaginas(n), [])
   const sensorGrafica = candidatos[iGrafica]
+
+  // Vista por defecto en la pantalla del vestíbulo: una cosa cada vez y
+  // cifras grandes. El cuadro de mando completo queda a una tecla (P).
+  if (vista === "carrusel") {
+    return (
+      <Carrusel
+        sensores={sensores}
+        kpis={kpis}
+        seriesKpi={seriesKpi}
+        conexion={conexion}
+        ahora={ahora}
+        inicioCiclo={inicioCiclo}
+      />
+    )
+  }
 
   return (
     // h-full fija la pantalla al monitor (señalética, sin scroll). En vertical
