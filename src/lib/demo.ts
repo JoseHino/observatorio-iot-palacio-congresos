@@ -3,7 +3,7 @@
    Sirven para dejar la pantalla montada y validada antes de tener la clave
    real: la estructura que devuelven es idéntica a la de la API de IoTsens. */
 
-import type { MedidaCruda, Punto } from "@/lib/tipos"
+import type { Kpi, MedidaCruda, Punto } from "@/lib/tipos"
 
 interface DefinicionDemo {
   n: string
@@ -69,6 +69,19 @@ function curva(def: DefinicionDemo, ms: number): number {
   return v
 }
 
+/** Indicadores agregados de mentira, con la misma forma que los reales. */
+const KPIS_DEMO: Array<Pick<Kpi, "nombre" | "etiqueta" | "familia" | "periodo" | "esTotal">> = [
+  { nombre: "ACCESOS_DIARIOS_PREHALL_TOTAL", etiqueta: "Prehall (total)", familia: "accesos", periodo: "DAILY", esTotal: true },
+  { nombre: "SALIDAS_DIARIO_PREHALL_TOTAL", etiqueta: "Prehall (total)", familia: "salidas", periodo: "DAILY", esTotal: true },
+  { nombre: "ACCESOS_DIARIO_PUERTA_HALL_TOTAL", etiqueta: "Puerta Hall (total)", familia: "accesos", periodo: "DAILY", esTotal: true },
+  { nombre: "SALIDAS_DIARIO_PUERTA_HALL_TOTAL", etiqueta: "Puerta Hall (total)", familia: "salidas", periodo: "DAILY", esTotal: true },
+  { nombre: "ACCESOS_DIARIO_EXPOSICIONES", etiqueta: "Exposiciones", familia: "accesos", periodo: "DAILY", esTotal: false },
+  { nombre: "SALIDAS_DIARIO_EXPOSICIONES", etiqueta: "Exposiciones", familia: "salidas", periodo: "DAILY", esTotal: false },
+  { nombre: "ACCESOS_DIARIO_SALA_AZUL", etiqueta: "Sala Azul", familia: "accesos", periodo: "DAILY", esTotal: false },
+  { nombre: "SALIDAS_DIARIO_SALA_AZUL", etiqueta: "Sala Azul", familia: "salidas", periodo: "DAILY", esTotal: false },
+  { nombre: "COMSUMO_AGUA_DIARIO", etiqueta: "Agua", familia: "agua", periodo: "DAILY", esTotal: false },
+]
+
 export const DEMO = {
   ultimos(): MedidaCruda[] {
     const ahora = Date.now()
@@ -79,10 +92,43 @@ export const DEMO = {
       unidad: s.u,
       valor: curva(s, ahora),
       ts: ahora - Math.floor(pseudoAleatorio(s.uuid.length + ahora / 3600000) * 240000),
+      codigo: "",
+      matiz: "",
+      equipo: s.deviceUuid,
+      exterior: /exterior/i.test(s.n),
+    }))
+  },
+
+  kpis(): Kpi[] {
+    const ahora = Date.now()
+    const inicioDia = new Date(ahora).setHours(0, 0, 0, 0)
+    return KPIS_DEMO.map((k, i) => ({
+      ...k,
+      uuid: `demo-kpi-${String(i + 1).padStart(2, "0")}`,
+      valor: Math.round(
+        k.familia === "agua"
+          ? 1500 + pseudoAleatorio(i + 7) * 1800
+          : 40 + pseudoAleatorio(i + 1) * 480,
+      ),
+      ts: inicioDia,
     }))
   },
 
   historico(uuid: string, desde: number, hasta: number): Punto[] {
+    // Los indicadores agregados van por día, no por lectura suelta.
+    if (uuid.startsWith("demo-kpi-")) {
+      const serie: Punto[] = []
+      const dia = 86400000
+      for (let t = Math.ceil(desde / dia) * dia; t <= hasta; t += dia) {
+        const finde = [0, 6].includes(new Date(t).getDay())
+        serie.push({
+          timestamp: t,
+          value: Math.round((finde ? 90 : 420) * (0.6 + pseudoAleatorio(t / dia + uuid.length))),
+        })
+      }
+      return serie
+    }
+
     const def = SENSORES.find((s) => s.uuid === uuid)
     if (!def) return []
     const paso = Math.max(300000, Math.round((hasta - desde) / 140))

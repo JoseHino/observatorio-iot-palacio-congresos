@@ -51,13 +51,36 @@ const TIPO_GENERICO = (unidad: string): TipoSensor => ({
   decimales: 1,
 })
 
-export function clasificar(nombre: string, unidadApi: string): TipoSensor {
+/**
+ * El código exacto manda sobre el nombre. Los nombres reales llevan pegado el
+ * número de serie del equipo (`0004A30B017559CE_NO2`), así que buscar por
+ * texto ahí produce falsos positivos; el código (`NO2`) es inequívoco.
+ * El nombre solo se usa como respaldo, sobre todo para el modo demostración.
+ */
+export function clasificar(codigo: string, nombre: string, unidadApi: string): TipoSensor {
+  const cod = normalizarTexto(codigo)
+  if (cod) {
+    const porCodigo = TIPOS_SENSOR.find((t) => t.codigos?.test(cod))
+    if (porCodigo) return porCodigo
+  }
   const texto = normalizarTexto(`${nombre || ""} ${unidadApi || ""}`)
   return TIPOS_SENSOR.find((t) => t.patron.test(texto)) ?? TIPO_GENERICO(unidadApi || "")
 }
 
-export function evaluar(tipo: TipoSensor, valor: number | null): Estado {
-  const u = tipo.umbrales
+/**
+ * Los umbrales de confort (temperatura, humedad, ruido) solo tienen sentido
+ * en espacios climatizados. Aplicados a la estación meteorológica o a un
+ * sensor de puerta marcarían "fuera de rango" un día normal de julio.
+ * Los de calidad del aire sí valen fuera: son de salud, no de confort.
+ */
+const esConfort = (tipo: TipoSensor): boolean => tipo.grupo === "confort"
+
+export function evaluar(
+  tipo: TipoSensor,
+  valor: number | null,
+  exterior = false,
+): Estado {
+  const u = exterior && esConfort(tipo) ? undefined : tipo.umbrales
   if (!u || valor === null || !Number.isFinite(valor)) {
     return { clase: "neutro", color: "var(--neutro)", etiqueta: "" }
   }

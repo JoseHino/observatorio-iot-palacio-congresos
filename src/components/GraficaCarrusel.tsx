@@ -97,11 +97,13 @@ export function GraficaCarrusel({ sensor, serie, total, indice, onPunto }: Props
 
   return (
     <>
-      <div className="text-[calc(var(--u)*2.2)] font-bold leading-tight">
-        {sensor ? sensor.nombre : "Sin histórico disponible"}
+      <div className="truncate text-[calc(var(--u)*2.2)] font-bold leading-tight">
+        {sensor ? sensor.tipo.etiqueta : "Sin histórico disponible"}
       </div>
-      <div className="text-[calc(var(--u)*1.35)] font-medium text-muted-foreground">
-        {sensor ? `Últimas ${CONFIG.horasHistorico} h${unidad ? ` · ${unidad}` : ""}` : ""}
+      <div className="truncate text-[calc(var(--u)*1.35)] font-medium text-muted-foreground">
+        {sensor
+          ? `${sensor.nombre} · últimas ${CONFIG.horasHistorico} h${unidad ? ` · ${unidad}` : ""}`
+          : ""}
       </div>
 
       {/* Altura mínima: sin ella la gráfica se aplasta a unos pocos píxeles

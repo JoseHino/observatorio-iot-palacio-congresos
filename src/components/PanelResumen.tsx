@@ -9,12 +9,12 @@ function Dato({ etiqueta, valor, sufijo, color }: {
   color?: string
 }) {
   return (
-    <div className="rounded-[10px] bg-muted px-[calc(var(--u)*1.3)] py-[calc(var(--u)*1.1)]">
-      <div className="text-[calc(var(--u)*1.25)] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+    <div className="rounded-[10px] bg-muted px-[calc(var(--u)*1)] py-[calc(var(--u)*0.9)]">
+      <div className="text-[calc(var(--u)*1.05)] font-semibold uppercase leading-tight tracking-[0.04em] text-muted-foreground">
         {etiqueta}
       </div>
       <div
-        className="cifras text-[calc(var(--u)*2.6)] font-bold leading-tight"
+        className="cifras text-[calc(var(--u)*2.2)] font-bold leading-tight"
         style={color ? { color } : undefined}
       >
         {valor}
@@ -36,7 +36,9 @@ export function PanelResumen({ sensores }: { sensores: Sensor[] }) {
   const ultima = Math.max(0, ...sensores.map((s) => s.ts ?? 0))
 
   return (
-    <div className="grid grid-cols-2 gap-[calc(var(--u)*1.2)]">
+    // Cuatro columnas y no dos: en la columna lateral el alto es el recurso
+    // escaso, y esta fila se lo estaba quitando al panel de accesos.
+    <div className="grid grid-cols-4 gap-[calc(var(--u)*0.9)] max-[1100px]:grid-cols-2">
       <Dato etiqueta="Sensores en línea" valor={enLinea.length} sufijo={` / ${sensores.length}`} />
       <Dato etiqueta="Última lectura" valor={ultima ? hora(ultima) : "—"} />
       <Dato etiqueta="En rango óptimo" valor={optimos} color="var(--ok)" />

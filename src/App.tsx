@@ -1,8 +1,9 @@
 import { TriangleAlert } from "lucide-react"
 import { useCallback, useMemo, useState, type ReactNode } from "react"
 
+import { BandaCifras } from "@/components/BandaCifras"
 import { GraficaCarrusel } from "@/components/GraficaCarrusel"
-import { ListaVigilancia } from "@/components/ListaVigilancia"
+import { PanelAforo } from "@/components/PanelAforo"
 import { PanelResumen } from "@/components/PanelResumen"
 import { RejillaSensores } from "@/components/RejillaSensores"
 import { Card } from "@/components/ui/card"
@@ -38,7 +39,8 @@ function Panel({ titulo, children, className }: {
 }
 
 export default function App() {
-  const { sensores, historicos, conexion, aviso, inicioCiclo, actualizar } = useObservatorio()
+  const { sensores, kpis, historicos, conexion, aviso, inicioCiclo, actualizar } =
+    useObservatorio()
   const ahora = useReloj()
   const [, alternarTema] = useTema()
   const [totalPaginas, setTotalPaginas] = useState(1)
@@ -99,6 +101,12 @@ export default function App() {
         </div>
       )}
 
+      {/* Los indicadores agregados son la única capa de datos que sabe dónde
+          está cada cosa, así que abren la pantalla. */}
+      <div className="px-[calc(var(--u)*2.6)] pt-[calc(var(--u)*2)]">
+        <BandaCifras kpis={kpis} />
+      </div>
+
       <main className="grid min-h-0 flex-1 gap-[calc(var(--u)*2)] px-[calc(var(--u)*2.6)] py-[calc(var(--u)*2)] [grid-template-columns:1fr_minmax(360px,31%)] max-[1100px]:grid-cols-1 max-[1100px]:overflow-y-auto">
         <RejillaSensores
           sensores={sensores}
@@ -107,12 +115,17 @@ export default function App() {
           onTotalPaginas={alTotalPaginas}
         />
 
-        {/* Filas explícitas: resumen y vigilancia ocupan lo suyo y la gráfica
-            se queda con el resto. Con flex, la gráfica pedía más alto del
-            disponible y se desbordaba sobre el panel de abajo. */}
-        <aside className="grid min-h-0 gap-[calc(var(--u)*1.8)] [grid-template-rows:auto_minmax(calc(var(--u)*28),1fr)_minmax(0,auto)] max-[1100px]:flex max-[1100px]:flex-col">
-          <Panel titulo="Estado de la red de sensores">
-            <PanelResumen sensores={sensores} />
+        {/* Filas explícitas: accesos y estado de la red ocupan lo suyo y la
+            gráfica se queda con el resto. Con flex, la gráfica pedía más alto
+            del disponible y se desbordaba sobre el panel de abajo.
+            Tres paneles como máximo: con cuatro, el contenido se recortaba
+            y el de accesos llegaba a enseñar una sola fila. */}
+        <aside className="grid min-h-0 gap-[calc(var(--u)*1.5)] [grid-template-rows:auto_minmax(calc(var(--u)*22),1fr)_auto] max-[1100px]:flex max-[1100px]:flex-col">
+          <Panel
+            titulo="Accesos de hoy por punto de paso"
+            className="min-h-0 overflow-hidden max-[1100px]:overflow-visible"
+          >
+            <PanelAforo kpis={kpis} />
           </Panel>
 
           <Panel
@@ -128,13 +141,8 @@ export default function App() {
             />
           </Panel>
 
-          {/* Este panel sí puede encogerse: si falta alto, pierde filas antes
-              que quitárselo a la gráfica. */}
-          <Panel
-            titulo="Indicadores a vigilar"
-            className="min-h-0 overflow-hidden max-[1100px]:overflow-visible"
-          >
-            <ListaVigilancia sensores={sensores} />
+          <Panel titulo="Estado de la red de sensores">
+            <PanelResumen sensores={sensores} />
           </Panel>
         </aside>
       </main>

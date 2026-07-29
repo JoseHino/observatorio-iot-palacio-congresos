@@ -151,7 +151,12 @@ export function RejillaSensores({ sensores, historicos, pagina, onTotalPaginas }
       const ultimas = tarjetas.slice(tarjetas.length - resto)
       const base = Math.floor(columnas / resto)
       const extra = columnas % resto
-      ultimas.forEach((t, i) => (t.style.gridColumn = `span ${base + (i < extra ? 1 : 0)}`))
+      // Tope de 2: sin él, un grupo con una sola tarjeta la estiraba a lo
+      // ancho de toda la rejilla, y una cifra suelta en una tarjeta gigante
+      // se lee peor que un hueco.
+      ultimas.forEach(
+        (t, i) => (t.style.gridColumn = `span ${Math.min(2, base + (i < extra ? 1 : 0))}`),
+      )
     })
   })
 
@@ -192,7 +197,7 @@ export function RejillaSensores({ sensores, historicos, pagina, onTotalPaginas }
             </h2>
             <div
               data-rejilla
-              className="grid gap-[calc(var(--u)*1.3)] [grid-template-columns:repeat(auto-fit,minmax(calc(var(--u)*21),1fr))] [grid-auto-rows:minmax(calc(var(--u)*15),auto)]"
+              className="grid gap-[calc(var(--u)*1.1)] [grid-template-columns:repeat(auto-fit,minmax(calc(var(--u)*17),1fr))] [grid-auto-rows:minmax(calc(var(--u)*12.5),auto)]"
             >
               {delGrupo.map((s) => (
                 <TarjetaSensor key={s.uuid} sensor={s} serie={historicos.get(s.uuid)} />

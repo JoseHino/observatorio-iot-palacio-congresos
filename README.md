@@ -3,22 +3,41 @@
 Pantalla pública con los datos en tiempo real de los sensores instalados en el
 Palacio de Congresos, leídos de la plataforma IoTsens.
 
-Ahora mismo funciona en **modo demostración** (datos simulados) porque faltan
-la clave y los identificadores de la instalación. En cuanto se rellenen, pasa
-sola a datos reales sin tocar una línea de código.
+Funciona con **datos reales** desde el 29/07/2026. La clave de la plataforma
+está guardada como secreto en el Worker; no aparece en este repositorio.
 
 ---
 
-## Qué hace falta pedir a los desarrolladores
+## Qué publica la plataforma
 
-| Dato | Para qué |
-|---|---|
-| `X-API-KEY` | La API rechaza cualquier petición sin ella (devuelve 401). |
-| `tenantUuid` | Identifica la instalación dentro de IoTsens. |
-| `organizationUuid` | Opcional, pero varios endpoints solo existen a nivel de organización. |
+Todo el recinto cuelga de un solo dispositivo lógico, el *NodoIoT*
+(`e89145a0-…`), del que dependen 49 equipos y unas 250 medidas.
 
-Conviene pedir una clave **de solo lectura**, porque la misma API permite
-borrar mediciones (`DELETE /v1/measurements/...`) y crear dispositivos.
+**Dos capas de datos, con papeles distintos:**
+
+| Capa | Endpoint | Qué aporta |
+|---|---|---|
+| Medidas en bruto | `/v1/catalog/…/devices/{uuid}` | Un solo GET devuelve el último valor de todos los sensores. Es lo que llena la rejilla. |
+| Indicadores agregados | `/v1/catalog/…/kpis` | 54 indicadores ya calculados (accesos y salidas por puerta, consumo de agua). |
+
+> **Los sensores en bruto no dicen dónde están.** La plataforma solo los
+> identifica por el número de serie del equipo (`24E124725F204791`). Existen
+> "assets" con nombre de sala (`…_Planta-1_Sala-Exposiciones`), pero vienen
+> **sin medidas asociadas**, así que no hay forma de cruzarlos por API. Por eso
+> los equipos se muestran agrupados por tipo y numerados
+> ("Sonda de confort 3"). Los KPI sí traen el sitio en el nombre, y son la
+> capa que da sentido a la pantalla.
+
+Conviene pedir una clave **de solo lectura**: la misma API permite borrar
+mediciones (`DELETE /v1/measurements/…`) y crear dispositivos.
+
+### Sobre los contadores de paso
+
+Los KPI de accesos son **contadores por punto de paso**, no un aforo del
+edificio: incluyen escaleras y salas interiores, y las salidas registradas
+superan a las entradas. Por eso la pantalla **no** publica una "ocupación
+actual" restando unas de otras — daría negativo. Muestra el tránsito, que es
+lo que los sensores miden de verdad.
 
 ---
 
@@ -71,15 +90,17 @@ refrescando cada minuto gasta unas 25.000 al mes.
 
 ### 3. Rellenar `src/lib/config.ts`
 
+Ya está hecho, con los datos de la instalación:
+
 ```ts
-proxy: "https://iotsens-palacio-congresos.xxx.workers.dev",
-tenantUuid: "...",
-organizationUuid: "...",
-assetUuid: "...",
+proxy: "https://iotsens-palacio-congresos.josemariahf612.workers.dev",
+tenantUuid: "d494ce35-8330-4b4f-b91c-b520544ca72e",
+organizationUuid: "d127fa54-70db-4556-9c39-c600d26c956e",
+deviceUuid: "e89145a0-ba40-4a65-96ae-bd1d12119062",
 ```
 
-Al recompilar (`npm run build`), el aviso amarillo desaparece y el indicador de
-la cabecera pasa a **Datos en vivo**.
+Al recompilar (`npm run build`), el indicador de la cabecera muestra
+**Datos en vivo**.
 
 ### 4. Cerrar el proxy (recomendado, una vez publicada la pantalla)
 
@@ -90,10 +111,18 @@ de la pantalla y volver a desplegar. Así el proxy solo atiende a esa web.
 
 ## La pantalla
 
+- **Banda de cifras del día** (arriba): entradas por la puerta principal y por
+  el prehall, tránsito registrado y consumo de agua. Salen de los KPI.
 - **Se adapta sola a los sensores que haya.** No hay ninguna lista fija: lee el
-  catálogo, clasifica cada medida por su nombre (temperatura, CO₂, aforo,
-  energía…) y le pone icono, unidad y umbrales de color. Si mañana añaden
-  sensores, aparecen sin tocar nada. Lo que no reconoce va a "Otros indicadores".
+  catálogo, clasifica cada medida por su **código exacto** (`CO2`, `SOUND_LAEQ`,
+  `NO2`…) y le pone icono, unidad y umbrales. Si mañana añaden sensores,
+  aparecen sin tocar nada. Lo que no reconoce va a "Otros indicadores".
+- **Los umbrales de confort no se aplican a la intemperie.** Las familias
+  marcadas `exterior` en `FAMILIAS_EQUIPO` (meteorología, calidad del aire,
+  sonómetros de fachada, sensores de puerta) no se juzgan con criterios de
+  confort: 33 °C en la calle en julio es normal, y marcarlo "fuera de rango"
+  desinformaría. Los umbrales de calidad del aire sí se aplican siempre, porque
+  son de salud y no de confort.
 - **Paginación automática.** Si hay más indicadores de los que caben en la
   pantalla, se reparten en páginas que rotan cada 18 s. Nunca hay scroll ni
   recortes.
