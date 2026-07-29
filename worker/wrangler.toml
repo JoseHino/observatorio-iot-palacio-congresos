@@ -3,9 +3,10 @@ main = "worker.js"
 compatibility_date = "2026-07-01"
 
 [vars]
-# Cuando la pantalla ya este publicada, cambia * por el dominio real
-# (p.ej. "https://josehino.github.io") para que nadie mas use el proxy.
-ORIGEN_PERMITIDO = "*"
+# Dominios que pueden usar el proxy, separados por comas. El primero es el de
+# la pantalla publicada; los de localhost son para desarrollo (npm run dev y
+# npm run preview). Poner "*" lo abre a cualquiera.
+ORIGEN_PERMITIDO = "https://josehino.github.io,http://localhost:5173,http://localhost:4173"
 SEGUNDOS_CACHE = "20"
 
 # La clave NO va aqui. Se sube como secreto:

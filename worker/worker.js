@@ -21,7 +21,7 @@ export default {
   async fetch(peticion, entorno, contexto) {
     const url = new URL(peticion.url);
     const cors = {
-      'Access-Control-Allow-Origin': entorno.ORIGEN_PERMITIDO || '*',
+      'Access-Control-Allow-Origin': origenPermitido(peticion, entorno),
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Max-Age': '86400',
@@ -71,6 +71,24 @@ export default {
     return salida;
   },
 };
+
+/**
+ * ORIGEN_PERMITIDO admite varios dominios separados por comas. Se devuelve el
+ * que ha pedido, no la lista entera: la cabecera solo acepta un valor, y
+ * responder con todos equivale a no filtrar nada.
+ * Un origen no autorizado recibe el primero de la lista, que su navegador
+ * rechazará por no coincidir con el suyo.
+ */
+function origenPermitido(peticion, entorno) {
+  const lista = (entorno.ORIGEN_PERMITIDO || '*')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  if (lista.includes('*')) return '*';
+  const origen = peticion.headers.get('Origin');
+  return origen && lista.includes(origen) ? origen : lista[0];
+}
 
 function respuesta(objeto, estado, cors) {
   return new Response(JSON.stringify(objeto, null, 2), {
