@@ -20,13 +20,27 @@ Todo el recinto cuelga de un solo dispositivo lógico, el *NodoIoT*
 | Medidas en bruto | `/v1/catalog/…/devices/{uuid}` | Un solo GET devuelve el último valor de todos los sensores. Es lo que llena la rejilla. |
 | Indicadores agregados | `/v1/catalog/…/kpis` | 54 indicadores ya calculados (accesos y salidas por puerta, consumo de agua). |
 
-> **Los sensores en bruto no dicen dónde están.** La plataforma solo los
-> identifica por el número de serie del equipo (`24E124725F204791`). Existen
-> "assets" con nombre de sala (`…_Planta-1_Sala-Exposiciones`), pero vienen
-> **sin medidas asociadas**, así que no hay forma de cruzarlos por API. Por eso
-> los equipos se muestran agrupados por tipo y numerados
-> ("Sonda de confort 3"). Los KPI sí traen el sitio en el nombre, y son la
-> capa que da sentido a la pantalla.
+### Cómo se averigua dónde está cada sensor
+
+No hay ningún endpoint que lo diga: los "assets" con nombre de sala
+(`…_Planta-1_Sala-Exposiciones`) existen pero vienen **sin medidas asociadas**.
+
+Se deduce por otra vía. El detalle de un indicador —**a nivel de tenant**, no de
+organización, que ahí devuelve 404—
+
+```
+GET /v1/catalog/tenants/{tenantUuid}/kpis/{kpiUuid}
+```
+
+trae en `measurements[]` el uuid del sensor que lo alimenta. Cruzando eso con el
+nombre del indicador (`ACCESOS_DIARIOS_PREHALL_1`) se sabe que ese contador está
+en el Prehall 1. Así están localizados **los 10 contadores de paso y el contador
+de agua**, en `UBICACIONES` (`src/lib/config.ts`).
+
+Los demás equipos (sondas de confort, sonómetros, sensores de puerta) no
+alimentan ningún indicador, así que **siguen sin ubicación** y se muestran
+numerados por tipo ("Sonda de confort 3"). Para esos hace falta el plano del
+Palacio; cuando llegue, se añaden al mismo `UBICACIONES` y aparecen solos.
 
 Conviene pedir una clave **de solo lectura**: la misma API permite borrar
 mediciones (`DELETE /v1/measurements/…`) y crear dispositivos.
@@ -38,6 +52,25 @@ edificio: incluyen escaleras y salas interiores, y las salidas registradas
 superan a las entradas. Por eso la pantalla **no** publica una "ocupación
 actual" restando unas de otras — daría negativo. Muestra el tránsito, que es
 lo que los sensores miden de verdad.
+
+### Dos avisos para el proveedor de la plataforma
+
+1. **Un contador está dado de alta dos veces.** `ESCALERA_SUR_1` y
+   `ESCALERA_NORTE_1` apuntan al mismo sensor físico
+   (`24E124757D364092`), así que publican el mismo tránsito por duplicado.
+   Peor: `SALA_AZUL` los suma a los dos, y da el doble de accesos de los que
+   sus sensores han contado. Aquí se descarta `ESCALERA_SUR_1`
+   (`KPIS_DUPLICADOS`) hasta que confirmen cuál es el nombre bueno.
+2. **Un contador no lo recoge ningún indicador.** El equipo
+   `24E124614C471012` está reportando entradas y salidas, pero no aparece en
+   ningún KPI, así que su tránsito no se contabiliza en ningún sitio. En la
+   pantalla sale como "Contador de paso 4", sin ubicación.
+
+Para distinguir un indicador agregado de uno que lee un sensor **hay que
+mirar `operation`** (`SUM` frente a `INCREMENT`), no si el nombre lleva la
+palabra `TOTAL`: `ACCESOS_DIARIO_SALA_AZUL` no la lleva y sin embargo agrega
+tres contadores. Contándolo como un punto de paso más, el tránsito del día
+salía por 1.101 en vez de por 520.
 
 ---
 

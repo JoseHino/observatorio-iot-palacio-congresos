@@ -104,6 +104,7 @@ export const DEMO = {
     const inicioDia = new Date(ahora).setHours(0, 0, 0, 0)
     return KPIS_DEMO.map((k, i) => ({
       ...k,
+      operacion: k.esTotal ? "SUM" : "INCREMENT",
       uuid: `demo-kpi-${String(i + 1).padStart(2, "0")}`,
       valor: Math.round(
         k.familia === "agua"

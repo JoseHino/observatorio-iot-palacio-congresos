@@ -103,7 +103,15 @@ export interface Kpi {
   /** Qué mide: entradas, salidas o consumo. */
   familia: "accesos" | "salidas" | "agua" | "otros"
   periodo: "DAILY" | "HOURLY"
-  /** true cuando la plataforma ya suma varios accesos en un solo indicador. */
+  /**
+   * Cómo lo calcula la plataforma. `SUM` significa que agrega otros KPI;
+   * `INCREMENT`, que lee un sensor directamente.
+   */
+  operacion: string
+  /**
+   * true cuando el indicador agrega a otros y contarlo junto a ellos
+   * duplicaría el tránsito.
+   */
   esTotal: boolean
   valor: number | null
   ts: number | null

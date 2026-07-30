@@ -46,12 +46,48 @@ export const CODIGOS_OCULTOS =
   /^(board_voltage|status|log_time|log_volume|current_time|delta_volume_\d+|partial_counter_(in|out)\d*|sound_p\d+)$/i
 
 /* ------------------------------------------------------------------
+   Ubicación real de los equipos.
+
+   La plataforma no publica ningún endpoint que diga en qué sala está
+   cada sensor: los "assets" con nombre de sala vienen sin medidas
+   asociadas. Pero el detalle de cada indicador
+   (`/v1/catalog/tenants/{t}/kpis/{uuid}`, a nivel de TENANT, no de
+   organización) sí trae en `measurements[]` el uuid del sensor que lo
+   alimenta. Cruzando eso con el nombre del indicador
+   (ACCESOS_DIARIOS_PREHALL_1) se deduce dónde está cada contador.
+
+   Así se han localizado los 10 contadores de paso y el contador de
+   agua. El resto de equipos (sondas, sonómetros, sensores de puerta)
+   no lo alimenta ningún indicador, así que siguen sin ubicación: para
+   esos hace falta el plano del Palacio. Cuando llegue, se añaden aquí.
+   ------------------------------------------------------------------ */
+export const UBICACIONES: Record<string, string> = {
+  "24E124757E155727": "Prehall 1",
+  "24E124757E155751": "Prehall 2",
+  "24E124757E030030": "Puerta Hall 2",
+  "24E124757E151915": "Puerta Hall 3",
+  "24E124757E030016": "Exposiciones",
+  "24E124757E150064": "Emergencia Sur Este",
+  "24E124757E151912": "Escalera Norte 2",
+  "24E124757D364092": "Escalera Norte 1",
+  "24E124614C476665": "Escalera Sur 2",
+}
+
+/**
+ * Indicadores que se descartan por duplicar a otro.
+ *
+ * ESCALERA_SUR_1 y ESCALERA_NORTE_1 apuntan al MISMO contador físico
+ * (24E124757D364092), así que la plataforma publica dos veces el mismo
+ * tránsito. Peor: SALA_AZUL los suma a los dos, y por eso da 27 accesos
+ * donde los sensores solo han contado 14. Pendiente de que el proveedor
+ * confirme cuál de los dos nombres es el correcto.
+ */
+export const KPIS_DUPLICADOS = /_ESCALERA_SUR_1$/
+
+/* ------------------------------------------------------------------
    Familias de equipo.
-   La plataforma identifica cada sensor solo por su número de serie
-   (24E124725F204791), sin decir en qué sala está: los "assets" con
-   nombre de sala existen pero vienen sin medidas asociadas. Hasta que
-   el Palacio facilite el plano de correspondencias, cada equipo se
-   nombra por su tipo y se numera por orden de aparición.
+   Para los equipos sin ubicación conocida, el nombre sale del tipo de
+   aparato y un número por orden de aparición.
    ------------------------------------------------------------------ */
 export const FAMILIAS_EQUIPO: FamiliaEquipo[] = [
   // Nombres cortos a propósito: van en tarjetas estrechas y, si no caben,

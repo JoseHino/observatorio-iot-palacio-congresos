@@ -14,7 +14,14 @@
      con el sitio en el nombre (ACCESOS_DIARIOS_PREHALL_TOTAL). Son la única
      capa que sabe dónde está cada cosa, y la que da sentido a la pantalla. */
 
-import { CODIGOS_OCULTOS, CONFIG, FAMILIAS_EQUIPO, MATICES } from "@/lib/config"
+import {
+  CODIGOS_OCULTOS,
+  CONFIG,
+  FAMILIAS_EQUIPO,
+  KPIS_DUPLICADOS,
+  MATICES,
+  UBICACIONES,
+} from "@/lib/config"
 import { DEMO } from "@/lib/demo"
 import type { Kpi, MedidaCruda, Punto } from "@/lib/tipos"
 
@@ -108,18 +115,23 @@ function nombrarEquipos(euis: string[]): Map<string, Etiqueta> {
 
   for (const eui of euis) {
     const familia = FAMILIAS_EQUIPO.find((f) => f.patron.test(eui))
-    if (!familia) {
-      nombres.set(eui, { nombre: eui, exterior: false })
-      continue
+    const exterior = Boolean(familia?.exterior)
+
+    // El número se consume aunque el equipo tenga ubicación conocida: así
+    // los que siguen sin ella no cambian de número el día que se localice
+    // otro más, y no despistan a quien esté mirando la pantalla a diario.
+    let porDefecto = eui
+    if (familia) {
+      if (familia.unico) {
+        porDefecto = familia.nombre
+      } else {
+        const n = (contador.get(familia.nombre) ?? 0) + 1
+        contador.set(familia.nombre, n)
+        porDefecto = `${familia.nombre} ${n}`
+      }
     }
-    const exterior = Boolean(familia.exterior)
-    if (familia.unico) {
-      nombres.set(eui, { nombre: familia.nombre, exterior })
-      continue
-    }
-    const n = (contador.get(familia.nombre) ?? 0) + 1
-    contador.set(familia.nombre, n)
-    nombres.set(eui, { nombre: `${familia.nombre} ${n}`, exterior })
+
+    nombres.set(eui, { nombre: UBICACIONES[eui] ?? porDefecto, exterior })
   }
   return nombres
 }
@@ -192,7 +204,10 @@ export async function leerSensores(modoDemo: boolean): Promise<MedidaCruda[]> {
  * Nombre legible de un indicador:
  * ACCESOS_DIARIOS_PREHALL_TOTAL -> "Prehall (total)".
  */
-function describirKpi(nombre: string): Pick<Kpi, "etiqueta" | "familia" | "esTotal"> {
+function describirKpi(
+  nombre: string,
+  operacion: string,
+): Pick<Kpi, "etiqueta" | "familia" | "esTotal"> {
   const limpio = nombre.replace(/_/g, " ").toUpperCase().trim()
 
   let familia: Kpi["familia"] = "otros"
@@ -202,7 +217,12 @@ function describirKpi(nombre: string): Pick<Kpi, "etiqueta" | "familia" | "esTot
   // plataforma (COMSUMO_AGUA_DIARIO).
   else if (/AGUA|CO[NM]SUMO/.test(limpio)) familia = "agua"
 
-  const esTotal = /\bTOTAL\b/.test(limpio)
+  /* Un indicador agrega a otros cuando su operación es SUM; los que leen un
+     sensor directamente son INCREMENT. Es más fiable que buscar la palabra
+     "TOTAL" en el nombre: ACCESOS_DIARIO_SALA_AZUL no la lleva y sin embargo
+     suma los tres contadores de escalera, así que contarlo como un punto de
+     paso más duplicaba el tránsito. */
+  const esTotal = operacion.toUpperCase() === "SUM"
 
   const lugar = limpio
     .replace(/\bTOTAL\b/g, "")
@@ -228,13 +248,16 @@ export async function leerKpis(modoDemo: boolean): Promise<Kpi[]> {
   const lista = await api<Pagina<KpiApi>>(`${baseCatalogo()}/kpis?size=500`)
   return (lista.content ?? [])
     .filter((k) => k.uuid && k.name)
+    .filter((k) => !KPIS_DUPLICADOS.test(k.name as string))
     .map((k) => {
       const valor = parseFloat(String(k.lastValueReported))
+      const operacion = k.operation ?? ""
       return {
         uuid: k.uuid as string,
         nombre: k.name as string,
-        ...describirKpi(k.name as string),
+        ...describirKpi(k.name as string, operacion),
         periodo: k.timePeriod === "HOURLY" ? ("HOURLY" as const) : ("DAILY" as const),
+        operacion,
         valor: Number.isFinite(valor) ? valor : null,
         ts: aMilisegundos(k.dateLastValueReported),
       }
