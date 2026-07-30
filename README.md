@@ -37,10 +37,14 @@ nombre del indicador (`ACCESOS_DIARIOS_PREHALL_1`) se sabe que ese contador est�
 en el Prehall 1. Así están localizados **los 10 contadores de paso y el contador
 de agua**, en `UBICACIONES` (`src/lib/config.ts`).
 
-Los demás equipos (sondas de confort, sonómetros, sensores de puerta) no
-alimentan ningún indicador, así que **siguen sin ubicación** y se muestran
-numerados por tipo ("Sonda de confort 3"). Para esos hace falta el plano del
-Palacio; cuando llegue, se añaden al mismo `UBICACIONES` y aparecen solos.
+El inventario completo lo facilitó el Palacio el 30/07/2026 y está volcado en
+`UBICACIONES` (`src/lib/config.ts`): los 44 equipos con su **sala, planta y
+zona**. Es la fuente buena; el truco de los KPI solo sirvió mientras no lo
+teníamos, y de hecho reveló que un contador está mal etiquetado (ver abajo).
+
+La zona es la que decide si a un equipo se le aplican umbrales de confort:
+antes lo decidía la familia del aparato, y eso metía en el mismo saco los
+sonómetros de la azotea y los del Hall Principal.
 
 Conviene pedir una clave **de solo lectura**: la misma API permite borrar
 mediciones (`DELETE /v1/measurements/…`) y crear dispositivos.
@@ -55,16 +59,23 @@ lo que los sensores miden de verdad.
 
 ### Dos avisos para el proveedor de la plataforma
 
-1. **Un contador está dado de alta dos veces.** `ESCALERA_SUR_1` y
-   `ESCALERA_NORTE_1` apuntan al mismo sensor físico
-   (`24E124757D364092`), así que publican el mismo tránsito por duplicado.
-   Peor: `SALA_AZUL` los suma a los dos, y da el doble de accesos de los que
-   sus sensores han contado. Aquí se descarta `ESCALERA_SUR_1`
-   (`KPIS_DUPLICADOS`) hasta que confirmen cuál es el nombre bueno.
-2. **Un contador no lo recoge ningún indicador.** El equipo
-   `24E124614C471012` está reportando entradas y salidas, pero no aparece en
-   ningún KPI, así que su tránsito no se contabiliza en ningún sitio. En la
-   pantalla sale como "Contador de paso 4", sin ubicación.
+Cruzando el inventario del Palacio con los sensores que alimentan cada KPI
+salen dos indicadores mal configurados. Los dos afectan a las escaleras de la
+Sala Azul:
+
+1. **Los KPI de `ESCALERA_NORTE_1` leen la cámara equivocada.** Apuntan a
+   `24E124757D364092`, que en el inventario es *Cámara escaleras **Sur** 1* —
+   la misma que alimenta los KPI de `ESCALERA_SUR_1`. Resultado: ese tránsito
+   se publica dos veces y con un nombre que no le corresponde, y
+   `SALA_AZUL`, que suma ambos, sale por el doble (62 accesos donde los
+   sensores contaron 32). Aquí se descartan los de `NORTE_1`
+   (`KPIS_DUPLICADOS`) por ser los mal etiquetados.
+2. **La cámara de escaleras Norte 1 de verdad no la lee nadie.** Es
+   `24E124614C471012`; está contando entradas y salidas, pero no aparece en
+   ningún KPI, así que su tránsito no se contabiliza en ningún sitio.
+
+Lo más probable es que sea el mismo error: al dar de alta los indicadores de
+Norte 1 se seleccionó la cámara de Sur 1 en lugar de la suya.
 
 Para distinguir un indicador agregado de uno que lee un sensor **hay que
 mirar `operation`** (`SUM` frente a `INCREMENT`), no si el nombre lleva la
@@ -165,10 +176,10 @@ La vista densa con los 164 indicadores paginados, para mantenimiento.
   catálogo, clasifica cada medida por su **código exacto** (`CO2`, `SOUND_LAEQ`,
   `NO2`…) y le pone icono, unidad y umbrales. Si mañana añaden sensores,
   aparecen sin tocar nada. Lo que no reconoce va a "Otros indicadores".
-- **Los umbrales de confort no se aplican a la intemperie.** Las familias
-  marcadas `exterior` en `FAMILIAS_EQUIPO` (meteorología, calidad del aire,
-  sonómetros de fachada, sensores de puerta) no se juzgan con criterios de
-  confort: 33 °C en la calle en julio es normal, y marcarlo "fuera de rango"
+- **Los umbrales de confort no se aplican a la intemperie.** Se excluyen los
+  equipos de la azotea (`ZONAS_EXTERIORES`, según la zona del inventario) y los
+  sensores pegados al marco de una puerta, cuya temperatura no describe el
+  espacio. 33 °C en la calle en julio es normal, y marcarlo "fuera de rango"
   desinformaría. Los umbrales de calidad del aire sí se aplican siempre, porque
   son de salud y no de confort.
 - **Paginación automática.** Si hay más indicadores de los que caben en la

@@ -9,6 +9,20 @@ export type IdGrupo =
   | "red"
   | "otros"
 
+/** Dónde está instalado un equipo, según el inventario del Palacio. */
+export interface Ubicacion {
+  /** Nombre corto para la tarjeta: "Anfiteatro B", "Puerta 1 Pre-Hall". */
+  lugar: string
+  planta: string
+  /** Espacio al que pertenece, para agrupar: "Anfiteatro", "Sala Azul"... */
+  zona: string
+  /**
+   * Fuerza "no evaluar confort" en equipos que no están en la azotea pero
+   * miden a la intemperie, como el sonómetro de la puerta de Exposiciones.
+   */
+  exterior?: boolean
+}
+
 /**
  * Tipo de equipo físico, reconocido por el prefijo de su número de serie.
  * `unico` marca los que solo hay uno: así no se numeran ("Contador general
@@ -79,6 +93,8 @@ export interface MedidaCruda {
   matiz: string
   /** Identificador del equipo físico (EUI) al que pertenece la medida. */
   equipo: string
+  /** Espacio del edificio donde está el equipo. Vacío si no se conoce. */
+  zona: string
   /** El equipo mide a la intemperie o en zonas sin climatizar. */
   exterior: boolean
 }

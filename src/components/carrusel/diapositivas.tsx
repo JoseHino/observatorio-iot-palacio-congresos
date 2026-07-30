@@ -9,7 +9,7 @@ import type { ReactNode } from "react"
 import { GraficaDiaria } from "@/components/carrusel/GraficaDiaria"
 import { Barras, CifraGrande, FilaCifras, RejillaLecturas, SinDatos } from "@/components/carrusel/piezas"
 import { puntosDePaso } from "@/components/PanelAforo"
-import { CONFIG } from "@/lib/config"
+import { CONFIG, EQUIPOS } from "@/lib/config"
 import type { Kpi, Punto, Sensor } from "@/lib/tipos"
 
 export interface DatosDiapositiva {
@@ -46,8 +46,13 @@ function Bloque({ titulo, children }: { titulo: string; children: ReactNode }) {
 
 /* ---------- utilidades de selección ---------- */
 
-const deFamilia = (sensores: Sensor[], patron: RegExp): Sensor[] =>
-  sensores.filter((s) => patron.test(s.nombre))
+/** Medidas de un equipo concreto, por su número de serie. */
+const deEquipo = (sensores: Sensor[], eui: string): Sensor[] =>
+  sensores.filter((s) => s.equipo === eui)
+
+/** Sensores de espacios interiores de uso público, ya con su sala conocida. */
+const deInterior = (sensores: Sensor[]): Sensor[] =>
+  sensores.filter((s) => s.zona && !s.exterior)
 
 const porTipo = (sensores: Sensor[], ...ids: string[]): Sensor[] =>
   sensores.filter((s) => ids.includes(s.tipo.id))
@@ -124,10 +129,11 @@ const CONFORT: Diapositiva = {
   id: "confort",
   titulo: "Confort en las salas",
   subtitulo: "Temperatura, humedad y nivel sonoro en los espacios interiores",
-  hayDatos: ({ sensores }) => deFamilia(sensores, /^Sonda de confort/).length > 0,
+  hayDatos: ({ sensores }) => porTipo(deInterior(sensores), "temperatura").length > 0,
   contenido: ({ sensores }) => {
-    const sondas = deFamilia(sensores, /^Sonda de confort/)
-    const interiores = deFamilia(sensores, /^Son[oó]metro interior/)
+    const dentro = deInterior(sensores)
+    const temperaturas = porTipo(dentro, "temperatura")
+    const ruidos = porTipo(dentro, "ruido")
 
     return (
       <>
@@ -135,29 +141,29 @@ const CONFORT: Diapositiva = {
           <CifraGrande
             icono={Thermometer}
             etiqueta="Temperatura media"
-            valor={media(porTipo(sondas, "temperatura"))}
+            valor={media(temperaturas)}
             unidad="°C"
             decimales={1}
-            detalle={`Media de ${porTipo(sondas, "temperatura").length} sondas`}
+            detalle={`Media de ${temperaturas.length} salas`}
           />
           <CifraGrande
             icono={Droplets}
             etiqueta="Humedad media"
-            valor={media(porTipo(sondas, "humedad"))}
+            valor={media(porTipo(dentro, "humedad"))}
             unidad="%"
             detalle="Humedad relativa"
           />
           <CifraGrande
             icono={Volume2}
             etiqueta="Nivel sonoro medio"
-            valor={media(porTipo(interiores, "ruido"))}
+            valor={media(ruidos)}
             unidad="dB(A)"
             decimales={1}
-            detalle={`Media de ${porTipo(interiores, "ruido").length} sonómetros`}
+            detalle={`Media de ${ruidos.length} sonómetros`}
           />
         </FilaCifras>
 
-        <RejillaLecturas sensores={porTipo(sondas, "temperatura")} />
+        <RejillaLecturas sensores={temperaturas} />
       </>
     )
   },
@@ -171,8 +177,8 @@ const AIRE: Diapositiva = {
   subtitulo: "Renovación del aire en las salas y contaminantes en el entorno",
   hayDatos: ({ sensores }) => porTipo(sensores, "co2").length > 0,
   contenido: ({ sensores }) => {
-    const sondas = deFamilia(sensores, /^Sonda de confort/)
-    const estacion = deFamilia(sensores, /^Calidad del aire/)
+    const sondas = porTipo(deInterior(sensores), "co2")
+    const estacion = deEquipo(sensores, EQUIPOS.calidadAire)
 
     return (
       <>
@@ -180,7 +186,7 @@ const AIRE: Diapositiva = {
           <CifraGrande
             icono={Wind}
             etiqueta="CO₂ medio en salas"
-            valor={media(porTipo(sondas, "co2"))}
+            valor={media(sondas)}
             unidad="ppm"
             detalle="Por debajo de 800 ppm el aire está bien renovado"
           />
@@ -200,7 +206,7 @@ const AIRE: Diapositiva = {
           />
         </FilaCifras>
 
-        <RejillaLecturas sensores={porTipo(sondas, "co2")} />
+        <RejillaLecturas sensores={sondas} />
       </>
     )
   },
@@ -212,9 +218,9 @@ const METEO: Diapositiva = {
   id: "meteo",
   titulo: "El tiempo en el Palacio",
   subtitulo: "Estación meteorológica en la azotea",
-  hayDatos: ({ sensores }) => deFamilia(sensores, /^Meteorolog/).length > 0,
+  hayDatos: ({ sensores }) => deEquipo(sensores, EQUIPOS.meteorologia).length > 0,
   contenido: ({ sensores }) => {
-    const meteo = deFamilia(sensores, /^Meteorolog/)
+    const meteo = deEquipo(sensores, EQUIPOS.meteorologia)
     const valor = (id: string) => meteo.find((s) => s.tipo.id === id)?.valor ?? null
 
     return (
@@ -274,7 +280,7 @@ const AGUA: Diapositiva = {
       : null
 
     const acumulado =
-      deFamilia(sensores, /^Contador de agua/).find((s) => s.tipo.id === "agua" && !s.matiz)
+      deEquipo(sensores, EQUIPOS.contadorAgua).find((s) => s.tipo.id === "agua" && !s.matiz)
         ?.valor ?? null
 
     return (

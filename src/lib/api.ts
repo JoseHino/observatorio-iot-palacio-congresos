@@ -21,6 +21,7 @@ import {
   KPIS_DUPLICADOS,
   MATICES,
   UBICACIONES,
+  ZONAS_EXTERIORES,
 } from "@/lib/config"
 import { DEMO } from "@/lib/demo"
 import type { Kpi, MedidaCruda, Punto } from "@/lib/tipos"
@@ -106,6 +107,7 @@ function extraerMatiz(nombre: string, codigo: string, equipo: string): string {
  */
 interface Etiqueta {
   nombre: string
+  zona: string
   exterior: boolean
 }
 
@@ -115,7 +117,6 @@ function nombrarEquipos(euis: string[]): Map<string, Etiqueta> {
 
   for (const eui of euis) {
     const familia = FAMILIAS_EQUIPO.find((f) => f.patron.test(eui))
-    const exterior = Boolean(familia?.exterior)
 
     // El número se consume aunque el equipo tenga ubicación conocida: así
     // los que siguen sin ella no cambian de número el día que se localice
@@ -131,7 +132,20 @@ function nombrarEquipos(euis: string[]): Map<string, Etiqueta> {
       }
     }
 
-    nombres.set(eui, { nombre: UBICACIONES[eui] ?? porDefecto, exterior })
+    const ubicacion = UBICACIONES[eui]
+    nombres.set(eui, {
+      nombre: ubicacion?.lugar ?? porDefecto,
+      zona: ubicacion?.zona ?? "",
+      /* No se juzga el confort por dos motivos distintos, y basta con uno:
+         el aparato no sirve para eso (un sensor pegado al marco de una
+         puerta) o el sitio está a la intemperie (la azotea). Antes dependía
+         solo de la familia, y eso metía en el mismo saco los sonómetros de
+         la azotea y los del Hall Principal. */
+      exterior:
+        Boolean(familia?.exterior) ||
+        Boolean(ubicacion?.exterior) ||
+        (ubicacion ? ZONAS_EXTERIORES.test(ubicacion.zona) : false),
+    })
   }
   return nombres
 }
@@ -166,6 +180,7 @@ function normalizar(medidas: MedidaApi[], deviceUuid: string): MedidaCruda[] {
         codigo,
         matiz,
         equipo,
+        zona: etiqueta?.zona ?? "",
         exterior: etiqueta?.exterior ?? false,
       }
     })

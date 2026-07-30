@@ -95,6 +95,7 @@ export const DEMO = {
       codigo: "",
       matiz: "",
       equipo: s.deviceUuid,
+      zona: "",
       exterior: /exterior/i.test(s.n),
     }))
   },
