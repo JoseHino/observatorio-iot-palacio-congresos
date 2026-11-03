@@ -66,6 +66,11 @@ export interface TipoSensor {
   grupo: IdGrupo
   decimales: number
   umbrales?: Umbrales
+  /**
+   * Rango físicamente posible. Una lectura fuera de él delata un sensor mal
+   * calibrado: no se evalúa ni entra en las medias, se marca para revisar.
+   */
+  creible?: [number, number]
 }
 
 export interface Estado {
@@ -129,7 +134,16 @@ export interface Kpi {
    * duplicaría el tránsito.
    */
   esTotal: boolean
+  /**
+   * Valor del periodo en curso. En los diarios es lo que va de hoy, sumado a
+   * partir de su gemelo horario; null si no tiene gemelo o no se pudo leer.
+   */
   valor: number | null
+  /**
+   * Solo en los diarios: total del último día cerrado (ayer). Es lo que la
+   * plataforma publica como último valor, con fecha de hoy a las 00:00.
+   */
+  ayer: number | null
   ts: number | null
 }
 

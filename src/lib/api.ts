@@ -256,27 +256,74 @@ function describirKpi(
   return { etiqueta: esTotal ? `${bonito} (total)` : bonito, familia, esTotal }
 }
 
+/**
+ * Clave común de un KPI diario y su gemelo horario:
+ * ACCESOS_DIARIOS_PREHALL_1 y ACCESOS_HORARIO_PREHALL_1 → ACCESOS_PREHALL_1.
+ */
+const claveGemelo = (nombre: string): string => nombre.replace(/_(DIARIOS?|HORARIOS?)_/, "_")
+
+/** Medianoche local del día en curso. */
+const inicioDeHoy = (): number => new Date().setHours(0, 0, 0, 0)
+
+/*
+ * Lo que va de hoy se suma desde los KPI horarios. No sirve el último valor
+ * del diario: la plataforma sella cada total diario al FINAL del periodo, así
+ * que el que lleva fecha de hoy a las 00:00 es el total de AYER (comprobado
+ * el 03-11-2026: coincide con la suma de las 24 horas anteriores). Los
+ * horarios solo cambian una vez por hora, así que se recalculan cada
+ * `minutosHoy` y no en cada refresco, para no gastar peticiones del proxy.
+ */
+let cacheHoy: { dia: number; leido: number; valores: Map<string, number> } | null = null
+
+async function sumasDeHoy(horarios: KpiApi[]): Promise<Map<string, number>> {
+  const dia = inicioDeHoy()
+  if (cacheHoy && cacheHoy.dia === dia && Date.now() - cacheHoy.leido < CONFIG.minutosHoy * 60000) {
+    return cacheHoy.valores
+  }
+
+  const pares = await enTanda(horarios, async (k) => {
+    const datos = await api<PuntoApi[]>(
+      `/v1/kpis/tenants/${CONFIG.tenantUuid}/kpis/${k.uuid}?from=${dia}&until=${Date.now()}`,
+    )
+    // Sellado al final de la hora: el de las 00:00 es la última hora de ayer.
+    const suma = aSerie(datos)
+      .filter((p) => p.timestamp > dia)
+      .reduce((t, p) => t + p.value, 0)
+    return [claveGemelo(k.name as string), suma] as const
+  })
+  cacheHoy = { dia, leido: Date.now(), valores: new Map(pares) }
+  return cacheHoy.valores
+}
+
 /** Indicadores ya agregados por la plataforma. Son los que traen ubicación. */
 export async function leerKpis(modoDemo: boolean): Promise<Kpi[]> {
   if (modoDemo) return DEMO.kpis()
 
   const lista = await api<Pagina<KpiApi>>(`${baseCatalogo()}/kpis?size=500`)
-  return (lista.content ?? [])
+  const validos = (lista.content ?? [])
     .filter((k) => k.uuid && k.name)
     .filter((k) => !KPIS_DUPLICADOS.test(k.name as string))
-    .map((k) => {
-      const valor = parseFloat(String(k.lastValueReported))
-      const operacion = k.operation ?? ""
-      return {
-        uuid: k.uuid as string,
-        nombre: k.name as string,
-        ...describirKpi(k.name as string, operacion),
-        periodo: k.timePeriod === "HOURLY" ? ("HOURLY" as const) : ("DAILY" as const),
-        operacion,
-        valor: Number.isFinite(valor) ? valor : null,
-        ts: aMilisegundos(k.dateLastValueReported),
-      }
-    })
+
+  const horarios = validos.filter((k) => k.timePeriod === "HOURLY")
+  // Si fallan los horarios, "hoy" queda sin dato; el resto sigue igual.
+  const hoy = await sumasDeHoy(horarios).catch(() => new Map<string, number>())
+
+  return validos.map((k) => {
+    const ultimo = parseFloat(String(k.lastValueReported))
+    const operacion = k.operation ?? ""
+    const periodo = k.timePeriod === "HOURLY" ? ("HOURLY" as const) : ("DAILY" as const)
+    const finito = Number.isFinite(ultimo) ? ultimo : null
+    return {
+      uuid: k.uuid as string,
+      nombre: k.name as string,
+      ...describirKpi(k.name as string, operacion),
+      periodo,
+      operacion,
+      valor: periodo === "HOURLY" ? finito : (hoy.get(claveGemelo(k.name as string)) ?? null),
+      ayer: periodo === "DAILY" ? finito : null,
+      ts: aMilisegundos(k.dateLastValueReported),
+    }
+  })
 }
 
 function aSerie(datos: PuntoApi[]): Punto[] {
@@ -318,7 +365,12 @@ export async function leerHistoricoKpi(
   const datos = await api<PuntoApi[]>(
     `/v1/kpis/tenants/${CONFIG.tenantUuid}/kpis/${kpi.uuid}?from=${desde}&until=${hasta}`,
   )
-  return aSerie(datos)
+  const serie = aSerie(datos)
+  if (kpi.periodo !== "DAILY") return serie
+  // El total diario llega sellado a las 00:00 del día SIGUIENTE: se lleva a
+  // la medianoche del día que de verdad resume (1 ms antes cae en ese día,
+  // y setHours lo ajusta bien también en los cambios de hora).
+  return serie.map((p) => ({ ...p, timestamp: new Date(p.timestamp - 1).setHours(0, 0, 0, 0) }))
 }
 
 /** Lanza las peticiones de histórico de 4 en 4 para no saturar el proxy. */

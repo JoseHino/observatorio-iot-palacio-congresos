@@ -32,6 +32,14 @@ export const CONFIG = {
 
   /** Días de histórico que se piden a los indicadores agregados (KPI). */
   diasHistoricoKpi: 14,
+  /**
+   * Consumo diario de agua por encima del cual la lectura se descarta. La
+   * plataforma ha llegado a publicar ±2.000 millones de litros en un día
+   * (30-10 a 1-11-2026), y el consumo real ronda los 100-6.000 L.
+   */
+  aguaMaximaDiaria: 100000,
+  /** Cada cuánto se recalcula lo que va de día a partir de los KPI horarios. */
+  minutosHoy: 10,
 
   /** 'auto' = datos reales si hay proxy; si no, demo. 'si' = fuerza demo. 'no' = nunca demo. */
   modoDemo: "auto" as "auto" | "si" | "no",
@@ -213,6 +221,9 @@ export const TIPOS_SENSOR: TipoSensor[] = [
     grupo: "aire",
     decimales: 0,
     umbrales: { optimo: [0, 800], aviso: [0, 1200] },
+    // El aire exterior ya tiene unas 420 ppm: en una sala no se puede bajar
+    // de ahí. Se deja margen para la tolerancia de las sondas (±30-50 ppm).
+    creible: [380, 10000],
   },
   {
     id: "pm1",

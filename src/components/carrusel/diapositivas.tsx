@@ -10,6 +10,7 @@ import { GraficaDiaria } from "@/components/carrusel/GraficaDiaria"
 import { Barras, CifraGrande, FilaCifras, RejillaLecturas, SinDatos } from "@/components/carrusel/piezas"
 import { puntosDePaso } from "@/components/PanelAforo"
 import { CONFIG, EQUIPOS } from "@/lib/config"
+import { esCreible } from "@/lib/formato"
 import type { Kpi, Punto, Sensor } from "@/lib/tipos"
 
 export interface DatosDiapositiva {
@@ -62,7 +63,10 @@ const kpiDiario = (kpis: Kpi[], patron: RegExp): number | null =>
 
 /** Media de las lecturas válidas. null si no hay ninguna. */
 function media(sensores: Sensor[]): number | null {
-  const v = sensores.map((s) => s.valor).filter((x): x is number => x !== null)
+  // Las lecturas imposibles (CO₂ por debajo del aire exterior) no promedian.
+  const v = sensores
+    .filter((s) => s.valor !== null && esCreible(s.tipo, s.valor))
+    .map((s) => s.valor as number)
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null
 }
 
@@ -271,10 +275,10 @@ const AGUA: Diapositiva = {
   subtitulo: "Contador general del edificio",
   hayDatos: ({ kpis }) => kpis.some((k) => k.familia === "agua"),
   contenido: ({ kpis, sensores, seriesKpi }) => {
+    // Ya viene sin los consumos imposibles y con cada total en su día real;
+    // todos son días cerrados (la plataforma no da el de hoy hasta mañana).
     const serie = seriesKpi.get("agua") ?? []
-    // Días cerrados: el de hoy todavía está sumando y desvirtuaría la media.
-    const hoy = new Date().setHours(0, 0, 0, 0)
-    const cerrados = serie.filter((p) => new Date(p.timestamp).setHours(0, 0, 0, 0) < hoy)
+    const cerrados = serie
     const mediaDiaria = cerrados.length
       ? cerrados.reduce((a, p) => a + p.value, 0) / cerrados.length
       : null
@@ -288,17 +292,17 @@ const AGUA: Diapositiva = {
         <FilaCifras>
           <CifraGrande
             icono={Droplets}
-            etiqueta="Hoy"
-            valor={kpiDiario(kpis, /AGUA/)}
+            etiqueta="Ayer"
+            valor={kpis.find((k) => k.periodo === "DAILY" && /AGUA/.test(k.nombre))?.ayer ?? null}
             unidad="litros"
-            detalle="En lo que va de día"
+            detalle="Último día cerrado"
           />
           <CifraGrande
             icono={Droplets}
             etiqueta="Media diaria"
             valor={mediaDiaria}
             unidad="litros"
-            detalle={`Últimos ${cerrados.length} días completos`}
+            detalle={`Últimos ${cerrados.length} días con lectura válida`}
           />
           <CifraGrande
             icono={Gauge}

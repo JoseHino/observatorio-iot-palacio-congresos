@@ -112,6 +112,14 @@ export const DEMO = {
           ? 1500 + pseudoAleatorio(i + 7) * 1800
           : 40 + pseudoAleatorio(i + 1) * 480,
       ),
+      ayer:
+        k.periodo === "DAILY"
+          ? Math.round(
+              k.familia === "agua"
+                ? 1500 + pseudoAleatorio(i + 11) * 1800
+                : 40 + pseudoAleatorio(i + 3) * 480,
+            )
+          : null,
       ts: inicioDia,
     }))
   },

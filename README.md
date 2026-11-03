@@ -57,6 +57,22 @@ superan a las entradas. Por eso la pantalla **no** publica una "ocupación
 actual" restando unas de otras — daría negativo. Muestra el tránsito, que es
 lo que los sensores miden de verdad.
 
+### Los KPI diarios llevan la fecha del día siguiente
+
+La plataforma sella cada total diario **al final** del periodo: el valor con
+fecha de hoy a las 00:00 es el total de **ayer** (coincide con la suma de las
+24 horas anteriores; comprobado el 03/11/2026). Por eso:
+
+- **Lo que va de hoy** se calcula sumando los KPI horarios desde medianoche
+  (cada `minutosHoy`, no en cada refresco, para no gastar peticiones).
+- Las **series diarias** se llevan un día atrás antes de pintarlas.
+- El **agua** no tiene KPI horario: la pantalla enseña el consumo de **ayer**.
+
+Además se descartan los consumos de agua imposibles (negativos o por encima de
+`aguaMaximaDiaria`; la plataforma publicó ±2.000 millones de litros entre el
+30/10 y el 1/11/2026) y las lecturas de CO₂ por debajo de 380 ppm, que no
+pueden darse en interior: salen como «Revisar sensor» y no entran en la media.
+
 ### Dos avisos para el proveedor de la plataforma
 
 Cruzando el inventario del Palacio con los sensores que alimentan cada KPI

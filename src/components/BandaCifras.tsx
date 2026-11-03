@@ -64,8 +64,9 @@ export function cifrasDelDia(kpis: Kpi[]): Cifra[] {
       clave: "agua",
       icono: Droplets,
       etiqueta: "Consumo de agua",
-      detalle: "Contador general · en lo que va de día",
-      valor: agua?.valor ?? null,
+      // La plataforma no da el agua por horas: lo último cerrado es ayer.
+      detalle: "Contador general · ayer",
+      valor: agua?.ayer ?? null,
       unidad: "litros",
     },
   ]

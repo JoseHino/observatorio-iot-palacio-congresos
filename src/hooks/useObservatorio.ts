@@ -56,6 +56,24 @@ function elegirKpiAfluencia(kpis: Kpi[]): Kpi | undefined {
 const elegirKpiAgua = (kpis: Kpi[]): Kpi | undefined =>
   kpis.find((k) => k.familia === "agua" && k.periodo === "DAILY")
 
+/**
+ * Deja la serie diaria lista para pintar.
+ *
+ * - Agua: fuera los consumos imposibles (negativos o de millones de litros).
+ *   La plataforma los ha publicado y, además de hundir la escala de la
+ *   gráfica, falseaban la media sin que se notara: se compensaban entre sí.
+ * - Afluencia: se añade el día en curso, que la plataforma aún no ha cerrado,
+ *   con lo que va de hoy. La gráfica lo pinta aparte, en gris.
+ */
+function depurarSerie(papel: PapelSerie, serie: Punto[], kpi: Kpi): Punto[] {
+  if (papel === "agua") {
+    return serie.filter((p) => p.value >= 0 && p.value <= CONFIG.aguaMaximaDiaria)
+  }
+  const hoy = new Date().setHours(0, 0, 0, 0)
+  const cerrados = serie.filter((p) => p.timestamp < hoy)
+  return kpi.valor === null ? cerrados : [...cerrados, { timestamp: hoy, value: kpi.valor }]
+}
+
 export function useObservatorio(): Observatorio {
   const [sensores, setSensores] = useState<Sensor[]>([])
   const [kpis, setKpis] = useState<Kpi[]>([])
@@ -125,7 +143,8 @@ export function useObservatorio(): Observatorio {
         elegidos.map(async ([papel, kpi]) => {
           if (!kpi) return [papel, [] as Punto[]] as const
           try {
-            return [papel, await leerHistoricoKpi(kpi, desdeDias, hasta, modoDemo.current)] as const
+            const serie = await leerHistoricoKpi(kpi, desdeDias, hasta, modoDemo.current)
+            return [papel, depurarSerie(papel, serie, kpi)] as const
           } catch {
             return [papel, [] as Punto[]] as const
           }

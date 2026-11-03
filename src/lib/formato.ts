@@ -75,11 +75,18 @@ export function clasificar(codigo: string, nombre: string, unidadApi: string): T
  */
 const esConfort = (tipo: TipoSensor): boolean => tipo.grupo === "confort"
 
+/** false si la lectura es físicamente imposible para esa magnitud. */
+export const esCreible = (tipo: TipoSensor, valor: number): boolean =>
+  !tipo.creible || (valor >= tipo.creible[0] && valor <= tipo.creible[1])
+
 export function evaluar(
   tipo: TipoSensor,
   valor: number | null,
   exterior = false,
 ): Estado {
+  if (valor !== null && tipo.creible && !esCreible(tipo, valor)) {
+    return { clase: "neutro", color: "var(--neutro)", etiqueta: "Revisar sensor" }
+  }
   const u = exterior && esConfort(tipo) ? undefined : tipo.umbrales
   if (!u || valor === null || !Number.isFinite(valor)) {
     return { clase: "neutro", color: "var(--neutro)", etiqueta: "" }
