@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sensores del Palacio</title>
+<style>
+:root{
+  --bg:#eef2f7; --panel:#ffffff; --texto:#1d2430; --suave:#5b6675; --borde:#dde3ec;
+  --azul:#1044CD; --verde:#1ADEB1;
+  --ok:#1f9d6b; --aviso:#d98a00; --mal:#d64545; --off:#6b7280; --dudoso:#7c5cd6;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12161d; --panel:#1b212b; --texto:#e7ecf3; --suave:#9aa6b6; --borde:#2b3442; }}
+:root[data-theme="dark"]{ --bg:#12161d; --panel:#1b212b; --texto:#e7ecf3; --suave:#9aa6b6; --borde:#2b3442; }
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--texto);font:14px/1.45 "Segoe UI",system-ui,-apple-system,sans-serif}
+.app{display:grid;grid-template-columns:330px 1fr 360px;height:100vh}
+aside{background:var(--panel);border-right:1px solid var(--borde);display:flex;flex-direction:column;min-height:0}
+aside.der{border-right:0;border-left:1px solid var(--borde)}
+header{padding:16px 16px 10px}
+h1{margin:0;font-size:19px;color:var(--azul)}
+.sub{color:var(--suave);font-size:12.5px;margin-top:2px}
+.vivo{display:inline-flex;align-items:center;gap:5px;font-size:12px;margin-top:6px;color:var(--suave)}
+.vivo i{width:8px;height:8px;border-radius:50%;background:var(--off)}
+.vivo.on i{background:var(--ok)}
+.filtros{padding:0 16px 10px;display:flex;flex-direction:column;gap:8px}
+.fila{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--borde);background:transparent;color:var(--texto);border-radius:999px;padding:4px 10px;font-size:12.5px;cursor:pointer;font:inherit;font-size:12.5px}
+.chip.on{background:var(--azul);border-color:var(--azul);color:#fff}
+input[type=search]{width:100%;padding:7px 10px;border:1px solid var(--borde);border-radius:8px;background:var(--bg);color:var(--texto);font:inherit}
+.lista{overflow:auto;flex:1;padding:0 8px 12px}
+.grupo{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--suave);margin:12px 8px 4px}
+.item{display:flex;gap:8px;align-items:flex-start;padding:7px 8px;border-radius:8px;cursor:pointer}
+.item:hover,.item.sel{background:color-mix(in srgb,var(--azul) 10%,transparent)}
+.punto{width:10px;height:10px;border-radius:50%;margin-top:5px;flex:none;display:inline-block}
+.item b{font-weight:600;display:block}
+.item small{color:var(--suave)}
+#escena{position:relative;min-width:0;overflow:hidden}
+#escena canvas{display:block}
+.capa{position:absolute;background:var(--panel);border:1px solid var(--borde);border-radius:10px;font-size:12.5px}
+.leyenda{left:12px;bottom:12px;padding:8px 12px;display:flex;gap:12px;flex-wrap:wrap;max-width:calc(100% - 24px)}
+.leyenda span{display:flex;align-items:center;gap:5px}
+.plantas{right:12px;top:12px;display:flex;flex-direction:column;gap:6px;background:none;border:0}
+.plantas .chip{background:var(--panel)}
+.plantas .chip.on{background:var(--azul)}
+.aviso{left:12px;top:12px;border-left:4px solid var(--aviso);padding:8px 12px;max-width:430px}
+.etiq{position:absolute;pointer-events:none;font-size:11.5px;font-weight:600;color:var(--texto);background:color-mix(in srgb,var(--panel) 85%,transparent);padding:1px 6px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-50%)}
+.etiq.norte{color:var(--mal);font-size:14px}
+.ficha{padding:16px;overflow:auto;flex:1}
+.ficha h2{margin:0 0 2px;font-size:17px}
+.estado{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;color:#fff;margin:6px 0}
+.nota{border-left:3px solid var(--mal);padding:6px 10px;background:color-mix(in srgb,var(--mal) 8%,transparent);border-radius:0 6px 6px 0;margin:8px 0}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+td,th{padding:5px 4px;border-bottom:1px solid var(--borde);text-align:left;vertical-align:top}
+th{color:var(--suave);font-weight:600;font-size:12px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:13px;margin-top:8px}
+.meta div:nth-child(odd){color:var(--suave)}
+.resumen{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0}
+.resumen div{border:1px solid var(--borde);border-radius:8px;padding:8px}
+.resumen b{font-size:20px;display:block}
+.pie{font-size:11.5px;color:var(--suave);padding:10px 16px;border-top:1px solid var(--borde)}
+.pie a{color:inherit}
+@media (max-width:1100px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto 65vh auto;height:auto}
+  .lista{max-height:40vh}
+  .aviso{max-width:calc(100% - 130px)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <header>
+      <h1>Sensores del Palacio de Congresos</h1>
+      <div class="sub">43 equipos · plataforma Nealis Tech (IoTsens) · edificio según el Catastro</div>
+      <div class="vivo" id="vivo"><i></i><span>Conectando con la plataforma…</span></div>
+    </header>
+    <div class="filtros">
+      <input type="search" id="buscar" placeholder="Buscar por nombre, sala o número de serie">
+      <div class="fila" id="fTipo"></div>
+      <div class="fila" id="fEstado"></div>
+    </div>
+    <div class="lista" id="lista"></div>
+  </aside>
+  <main id="escena">
+    <div class="capa aviso"><b>Posiciones aproximadas.</b> La plataforma no tiene colocado ningún sensor en los planos: cada uno se dibuja dentro de su sala, no en su punto exacto.</div>
+    <div class="capa plantas" id="fPlanta"></div>
+    <div class="capa leyenda" id="leyenda"></div>
+  </main>
+  <aside class="der">
+    <div class="ficha" id="ficha"></div>
+    <div class="pie">Edificio: Catastro, parcela 9623103UF2492S (9 cuerpos, alturas por número de plantas). Unidades añadidas por AMMA: la plataforma no publica ninguna. Mínimo y máximo: del 27-10 al 3-11-2026. <a href="../">Volver a la pantalla</a></div>
+  </aside>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const SENSORES = [{"serie":"0004A30B004F7A5D","alias":"Sonido exterior puerta Exposiciones","tipo":"Sonómetro","categoria":"SoundMeter","planta":"Planta 1","zona":"Entrada Exposiciones","ultimo":"03/11/26 11:30","frecuencia":"cada 10-26 min","estado":"ok","nota":"","lecturas":[{"c":"SOUND_MAX","n":"Ruido máximo","v":79,"u":"dB","min":null,"max":null},{"c":"SOUND_LAEQ","n":"Ruido medio","v":69.6,"u":"dB","min":50.1,"max":75.9}]},{"serie":"0004A30B017559CE","alias":"Calidad del aire Azotea Norte","tipo":"Calidad del aire","categoria":"AirQualityObserved","planta":"Azotea","zona":"Azotea","ultimo":"03/11/26 11:05","frecuencia":"cada 22-33 min","estado":"ok","nota":"","lecturas":[{"c":"SOUND_MAX","n":"Ruido máximo","v":90.6,"u":"dB","min":null,"max":null},{"c":"SOUND_LAEQ","n":"Ruido medio","v":67.1,"u":"dB","min":46.8,"max":74.4},{"c":"Temperature","n":"Temperatura","v":14.85,"u":"°C","min":14.6,"max":28},{"c":"Humidity","n":"Humedad","v":73.48,"u":"%","min":39.9,"max":82.8},{"c":"TVOC_Index","n":"Índice COV","v":337,"u":"","min":1,"max":462},{"c":"CO2","n":"CO₂","v":418,"u":"ppm","min":404,"max":478},{"c":"PM_10","n":"PM10","v":4,"u":"µg/m³","min":1,"max":15},{"c":"CO","n":"CO","v":474,"u":"","min":18,"max":474},{"c":"H2S","n":"H₂S","v":3,"u":"","min":null,"max":null},{"c":"NO","n":"NO","v":6,"u":"","min":null,"max":null},{"c":"NO2","n":"NO₂","v":32,"u":"","min":0,"max":41},{"c":"OX","n":"Oxidantes","v":0,"u":"","min":0,"max":20},{"c":"SO2","n":"SO₂","v":4,"u":"","min":null,"max":null},{"c":"PM_1.0","n":"PM1","v":0,"u":"µg/m³","min":null,"max":null},{"c":"PM_2.4","n":"PM2,5","v":2,"u":"µg/m³","min":1,"max":6}]},{"serie":"0004A30B01755C3B","alias":"Sonido entrada Sala Azul","tipo":"Sonómetro","categoria":"SoundMeter","planta":"Planta 1","zona":"Sala Azul","ultimo":"03/11/26 11:28","frecuencia":"cada 10-26 min","estado":"ok","nota":"","lecturas":[{"c":"SOUND_MAX","n":"Ruido máximo","v":72.7,"u":"dB","min":null,"max":null},{"c":"SOUND_LAEQ","n":"Ruido medio","v":51,"u":"dB","min":37.4,"max":87.5}]},{"serie":"0004A30B01756006","alias":"Sonido Exposiciones Oeste","tipo":"Sonómetro","categoria":"SoundMeter","planta":"Planta 1","zona":"Sala Exposiciones","ultimo":"03/11/26 11:10","frecuencia":"cada 10-26 min","estado":"ok","nota":"","lecturas":[{"c":"SOUND_MAX","n":"Ruido máximo","v":53.7,"u":"dB","min":null,"max":null},{"c":"SOUND_LAEQ","n":"Ruido medio","v":44.8,"u":"dB","min":31.2,"max":63}]},{"serie":"0004A30B0175708A","alias":"Sonido Exposiciones Este","tipo":"Sonómetro","categoria":"SoundMeter","planta":"Planta 1","zona":"Sala Exposiciones","ultimo":"03/11/26 10:23","frecuencia":"cada 10-26 min","estado":"ok","nota":"","lecturas":[{"c":"SOUND_MAX","n":"Ruido máximo","v":60.6,"u":"dB","min":null,"max":null},{"c":"SOUND_LAEQ","n":"Ruido medio","v":46.1,"u":"dB","min":30.7,"max":69}]},{"serie":"0004A30B01757485","alias":"Sonido Hall Principal Sur","tipo":"Sonómetro","categoria":"SoundMeter","planta":"Planta Baja","zona":"Hall Principal","ultimo":"03/11/26 11:00","frecuencia":"cada 10-26 min","estado":"dudoso","nota":"Huecos de hasta 3,5 h sin enviar","lecturas":[{"c":"SOUND_MAX","n":"Ruido máximo","v":73.9,"u":"dB","min":null,"max":null},{"c":"SOUND_LAEQ","n":"Ruido medio","v":62.2,"u":"dB","min":32.2,"max":67.3}]},{"serie":"0004A30B0175793C","alias":"Sonido Hall Principal Norte","tipo":"Sonómetro","categoria":"SoundMeter","planta":"Planta Baja","zona":"Hall Principal","ultimo":"03/11/26 11:23","frecuencia":"cada 10-26 min","estado":"ok","nota":"","lecturas":[{"c":"SOUND_MAX","n":"Ruido máximo","v":79.5,"u":"dB","min":null,"max":null},{"c":"SOUND_LAEQ","n":"Ruido medio","v":62.5,"u":"dB","min":33.5,"max":77.4}]},{"serie":"0004A30B01757A3A","alias":"Sonido Azotea Sur","tipo":"Sonómetro","categoria":"SoundMeter","planta":"Azotea","zona":"Azotea","ultimo":"03/11/26 11:23","frecuencia":"cada 10-26 min","estado":"ok","nota":"","lecturas":[{"c":"SOUND_MAX","n":"Ruido máximo","v":67.4,"u":"dB","min":null,"max":null},{"c":"SOUND_LAEQ","n":"Ruido medio","v":59.6,"u":"dB","min":44,"max":69.6}]},{"serie":"24E124136B503960","alias":"Apertura puerta 1 Exposiciones","tipo":"Sensor de puerta","categoria":"EnvironmentalMeter","planta":"Planta 1","zona":"Entrada Exposiciones","ultimo":"03/11/26 11:26","frecuencia":"cada 10-12 min","estado":"dudoso","nota":"No cambia en toda la semana (siempre cerrada)","lecturas":[{"c":"Battery","n":"Batería","v":100,"u":"%","min":100,"max":100},{"c":"Temperature","n":"Temperatura","v":19,"u":"°C","min":18.2,"max":22.3},{"c":"Humidity","n":"Humedad","v":63,"u":"%","min":49,"max":75},{"c":"Contact_status","n":"Puerta (0 cerrada / 1 abierta)","v":0,"u":"","min":0,"max":0}]},{"serie":"24E124136B503963","alias":"Apertura emergencia 1 Sur-Este","tipo":"Sensor de puerta","categoria":"EnvironmentalMeter","planta":"Planta Baja","zona":"Puertas emergencia","ultimo":"03/11/26 11:24","frecuencia":"cada 10-12 min","estado":"dudoso","nota":"No cambia en toda la semana (siempre cerrada)","lecturas":[{"c":"Battery","n":"Batería","v":100,"u":"%","min":100,"max":100},{"c":"Temperature","n":"Temperatura","v":18.8,"u":"°C","min":17.9,"max":23.5},{"c":"Humidity","n":"Humedad","v":67,"u":"%","min":47,"max":73},{"c":"Contact_status","n":"Puerta (0 cerrada / 1 abierta)","v":0,"u":"","min":0,"max":0}]},{"serie":"24E124136B503964","alias":"Apertura emergencia 1 Norte-Este","tipo":"Sensor de puerta","categoria":"EnvironmentalMeter","planta":"Planta Baja","zona":"Puertas emergencia","ultimo":"03/11/26 11:14","frecuencia":"cada 10-12 min","estado":"dudoso","nota":"No cambia en toda la semana (siempre cerrada)","lecturas":[{"c":"Battery","n":"Batería","v":100,"u":"%","min":100,"max":100},{"c":"Temperature","n":"Temperatura","v":18.9,"u":"°C","min":17.1,"max":22.7},{"c":"Humidity","n":"Humedad","v":65,"u":"%","min":49,"max":75},{"c":"Contact_status","n":"Puerta (0 cerrada / 1 abierta)","v":0,"u":"","min":0,"max":0}]},{"serie":"24E124136B504850","alias":"Apertura emergencia 2 Sur-Este","tipo":"Sensor de puerta","categoria":"EnvironmentalMeter","planta":"Planta Baja","zona":"Puertas emergencia","ultimo":"03/11/26 11:30","frecuencia":"cada 10-12 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":100,"u":"%","min":100,"max":100},{"c":"Temperature","n":"Temperatura","v":18.9,"u":"°C","min":18,"max":23.6},{"c":"Humidity","n":"Humedad","v":67,"u":"%","min":48,"max":73},{"c":"Contact_status","n":"Puerta (0 cerrada / 1 abierta)","v":1,"u":"","min":0,"max":1}]},{"serie":"24E124136B504869","alias":"Apertura puerta 2 Terraza Exposiciones","tipo":"Sensor de puerta","categoria":"EnvironmentalMeter","planta":"Planta 1","zona":"Entrada Exposiciones","ultimo":"03/11/26 11:27","frecuencia":"cada 10-12 min","estado":"aviso","nota":"Marca «abierta» toda la semana","lecturas":[{"c":"Battery","n":"Batería","v":100,"u":"%","min":100,"max":100},{"c":"Temperature","n":"Temperatura","v":19.5,"u":"°C","min":18.5,"max":26.4},{"c":"Humidity","n":"Humedad","v":61,"u":"%","min":42,"max":74},{"c":"Contact_status","n":"Puerta (0 cerrada / 1 abierta)","v":1,"u":"","min":1,"max":1}]},{"serie":"24E124136B504870","alias":"Apertura puerta 1 Terraza Exposiciones","tipo":"Sensor de puerta","categoria":"EnvironmentalMeter","planta":"Planta 1","zona":"Entrada Exposiciones","ultimo":"03/11/26 11:27","frecuencia":"cada 10-12 min","estado":"aviso","nota":"Marca «abierta» toda la semana","lecturas":[{"c":"Battery","n":"Batería","v":100,"u":"%","min":100,"max":100},{"c":"Temperature","n":"Temperatura","v":19.5,"u":"°C","min":18.7,"max":26.3},{"c":"Humidity","n":"Humedad","v":60,"u":"%","min":44,"max":74},{"c":"Contact_status","n":"Puerta (0 cerrada / 1 abierta)","v":1,"u":"","min":1,"max":1}]},{"serie":"24E124136B504880","alias":"Apertura puerta 1 Pre-Hall","tipo":"Sensor de puerta","categoria":"EnvironmentalMeter","planta":"Planta Baja","zona":"Pre-Hall","ultimo":"03/11/26 11:26","frecuencia":"cada 10-12 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":100,"u":"%","min":100,"max":100},{"c":"Temperature","n":"Temperatura","v":19.7,"u":"°C","min":19.5,"max":22.6},{"c":"Humidity","n":"Humedad","v":63,"u":"%","min":45,"max":73},{"c":"Contact_status","n":"Puerta (0 cerrada / 1 abierta)","v":0,"u":"","min":0,"max":1}]},{"serie":"24E124136B504893","alias":"Apertura puerta 4 Pre-Hall","tipo":"Sensor de puerta","categoria":"EnvironmentalMeter","planta":"Planta Baja","zona":"Pre-Hall","ultimo":"03/11/26 11:25","frecuencia":"cada 10-12 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":100,"u":"%","min":100,"max":100},{"c":"Temperature","n":"Temperatura","v":19.7,"u":"°C","min":19.5,"max":22.9},{"c":"Humidity","n":"Humedad","v":62,"u":"%","min":44,"max":71},{"c":"Contact_status","n":"Puerta (0 cerrada / 1 abierta)","v":0,"u":"","min":0,"max":1}]},{"serie":"24E124136B504909","alias":"Apertura puerta 2 Exposiciones","tipo":"Sensor de puerta","categoria":"EnvironmentalMeter","planta":"Planta 1","zona":"Entrada Exposiciones","ultimo":"03/11/26 11:23","frecuencia":"cada 10-12 min","estado":"dudoso","nota":"No cambia en toda la semana (siempre cerrada)","lecturas":[{"c":"Battery","n":"Batería","v":100,"u":"%","min":100,"max":100},{"c":"Temperature","n":"Temperatura","v":18.9,"u":"°C","min":18.2,"max":22.6},{"c":"Humidity","n":"Humedad","v":62,"u":"%","min":49,"max":76},{"c":"Contact_status","n":"Puerta (0 cerrada / 1 abierta)","v":0,"u":"","min":0,"max":0}]},{"serie":"24E124136B504915","alias":"Apertura emergencia Pre-Hall","tipo":"Sensor de puerta","categoria":"EnvironmentalMeter","planta":"Planta Baja","zona":"Puertas emergencia","ultimo":"03/11/26 11:26","frecuencia":"cada 10-12 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":100,"u":"%","min":100,"max":100},{"c":"Temperature","n":"Temperatura","v":19.5,"u":"°C","min":19.5,"max":22.1},{"c":"Humidity","n":"Humedad","v":64,"u":"%","min":44,"max":75},{"c":"Contact_status","n":"Puerta (0 cerrada / 1 abierta)","v":0,"u":"","min":0,"max":1}]},{"serie":"24E124614C471012","alias":"Cámara escaleras Norte 1","tipo":"Contador de personas","categoria":"AccessCount","planta":"Planta 1","zona":"Sala Azul","ultimo":"03/11/26 11:26","frecuencia":"cada 10 min","estado":"aviso","nota":"Funciona, pero ningún indicador recoge su cifra","lecturas":[{"c":"COUNTER_IN01","n":"Entradas acumuladas","v":1699,"u":"","min":1554,"max":1701},{"c":"COUNTER_OUT01","n":"Salidas acumuladas","v":2322,"u":"","min":2149,"max":2323}]},{"serie":"24E124614C476665","alias":"Cámara escaleras Sur 2","tipo":"Contador de personas","categoria":"AccessCount","planta":"Planta 1","zona":"Sala Azul","ultimo":"03/11/26 11:16","frecuencia":"cada 10 min","estado":"ok","nota":"","lecturas":[{"c":"COUNTER_IN01","n":"Entradas acumuladas","v":215,"u":"","min":202,"max":215},{"c":"COUNTER_OUT01","n":"Salidas acumuladas","v":587,"u":"","min":549,"max":587}]},{"serie":"24E124725F200956","alias":"Ambiente Anfiteatro C","tipo":"Ambiente","categoria":"EnvironmentalMeter","planta":"Planta Baja","zona":"Anfiteatro","ultimo":"03/11/26 11:28","frecuencia":"cada 10-12 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":93,"u":"%","min":93,"max":93},{"c":"Temperature","n":"Temperatura","v":20.8,"u":"°C","min":20,"max":22.5},{"c":"Humidity","n":"Humedad","v":53,"u":"%","min":46,"max":65},{"c":"CO2","n":"CO₂","v":550,"u":"ppm","min":372,"max":653}]},{"serie":"24E124725F201363","alias":"Ambiente Hall Principal","tipo":"Ambiente","categoria":"EnvironmentalMeter","planta":"Planta Baja","zona":"Hall Principal","ultimo":"03/11/26 11:25","frecuencia":"cada 10-12 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":93,"u":"%","min":93,"max":93},{"c":"Temperature","n":"Temperatura","v":23.8,"u":"°C","min":21.5,"max":25.3},{"c":"Humidity","n":"Humedad","v":51,"u":"%","min":41,"max":71},{"c":"CO2","n":"CO₂","v":663,"u":"ppm","min":538,"max":961}]},{"serie":"24E124725F202145","alias":"Ambiente Pre-Hall","tipo":"Ambiente","categoria":"EnvironmentalMeter","planta":"Planta Baja","zona":"Pre-Hall","ultimo":"03/11/26 11:26","frecuencia":"cada 10-12 min","estado":"aviso","nota":"CO₂ baja hasta 258 ppm: por debajo del aire de la calle","lecturas":[{"c":"Battery","n":"Batería","v":93,"u":"%","min":93,"max":93},{"c":"Temperature","n":"Temperatura","v":20.6,"u":"°C","min":20.6,"max":22.3},{"c":"Humidity","n":"Humedad","v":60,"u":"%","min":41,"max":73},{"c":"CO2","n":"CO₂","v":360,"u":"ppm","min":258,"max":515}]},{"serie":"24E124725F202340","alias":"Ambiente Anfiteatro A","tipo":"Ambiente","categoria":"EnvironmentalMeter","planta":"Planta Baja","zona":"Anfiteatro","ultimo":"03/11/26 11:18","frecuencia":"cada 10-12 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":94,"u":"%","min":94,"max":95},{"c":"Temperature","n":"Temperatura","v":20.6,"u":"°C","min":19.8,"max":22.5},{"c":"Humidity","n":"Humedad","v":50,"u":"%","min":42,"max":66},{"c":"CO2","n":"CO₂","v":503,"u":"ppm","min":426,"max":967}]},{"serie":"24E124725F202568","alias":"Ambiente Exposiciones Oeste","tipo":"Ambiente","categoria":"EnvironmentalMeter","planta":"Planta 1","zona":"Sala Exposiciones","ultimo":"03/11/26 11:24","frecuencia":"cada 10-12 min","estado":"mal","nota":"CO₂ entre 299 y 380 ppm: por debajo del aire de la calle","lecturas":[{"c":"Battery","n":"Batería","v":93,"u":"%","min":93,"max":93},{"c":"Temperature","n":"Temperatura","v":20.7,"u":"°C","min":20.5,"max":22.6},{"c":"Humidity","n":"Humedad","v":55,"u":"%","min":44,"max":69},{"c":"CO2","n":"CO₂","v":333,"u":"ppm","min":299,"max":380}]},{"serie":"24E124725F204511","alias":"Ambiente sala Azul","tipo":"Ambiente","categoria":"EnvironmentalMeter","planta":"Planta 1","zona":"Sala Azul","ultimo":"03/11/26 11:23","frecuencia":"cada 10-12 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":93,"u":"%","min":93,"max":93},{"c":"Temperature","n":"Temperatura","v":21.5,"u":"°C","min":19.7,"max":22},{"c":"Humidity","n":"Humedad","v":58,"u":"%","min":47,"max":65},{"c":"CO2","n":"CO₂","v":615,"u":"ppm","min":566,"max":1230}]},{"serie":"24E124725F204685","alias":"Ambiente Exposiciones Este","tipo":"Ambiente","categoria":"EnvironmentalMeter","planta":"Planta 1","zona":"Sala Exposiciones","ultimo":"03/11/26 11:31","frecuencia":"cada 10-12 min","estado":"mal","nota":"CO₂ entre 277 y 368 ppm: por debajo del aire de la calle","lecturas":[{"c":"Battery","n":"Batería","v":93,"u":"%","min":93,"max":93},{"c":"Temperature","n":"Temperatura","v":20.4,"u":"°C","min":20.3,"max":22.7},{"c":"Humidity","n":"Humedad","v":56,"u":"%","min":45,"max":69},{"c":"CO2","n":"CO₂","v":329,"u":"ppm","min":277,"max":368}]},{"serie":"24E124725F204791","alias":"Ambiente Anfiteatro B","tipo":"Ambiente","categoria":"EnvironmentalMeter","planta":"Planta Baja","zona":"Anfiteatro","ultimo":"03/11/26 11:18","frecuencia":"cada 10-12 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":93,"u":"%","min":93,"max":93},{"c":"Temperature","n":"Temperatura","v":22.2,"u":"°C","min":21.5,"max":22.9},{"c":"Humidity","n":"Humedad","v":57,"u":"%","min":41,"max":67},{"c":"CO2","n":"CO₂","v":731,"u":"ppm","min":341,"max":837}]},{"serie":"24E124725F206227","alias":"Ambiente Oficinas","tipo":"Ambiente","categoria":"EnvironmentalMeter","planta":"Planta Baja","zona":"Oficinas","ultimo":"03/11/26 11:29","frecuencia":"cada 10-12 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":93,"u":"%","min":93,"max":93},{"c":"Temperature","n":"Temperatura","v":20.8,"u":"°C","min":20.6,"max":22.3},{"c":"Humidity","n":"Humedad","v":60,"u":"%","min":44,"max":72},{"c":"CO2","n":"CO₂","v":594,"u":"ppm","min":406,"max":684}]},{"serie":"24E124743C404424","alias":"Sonido Anfiteatro C","tipo":"Sonómetro","categoria":"SoundMeter","planta":"Planta Baja","zona":"Anfiteatro","ultimo":"03/11/26 11:28","frecuencia":"cada 10-26 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":90,"u":"%","min":90,"max":91},{"c":"SOUND_SPL","n":"Ruido instantáneo","v":67,"u":"dB","min":null,"max":null},{"c":"SOUND_LEQ","n":"Ruido medio","v":50.9,"u":"dB","min":21.7,"max":59.5},{"c":"SOUND_MAX","n":"Ruido máximo","v":71.5,"u":"dB","min":null,"max":null}]},{"serie":"24E124743C404511","alias":"Sonido Anfiteatro B","tipo":"Sonómetro","categoria":"SoundMeter","planta":"Planta Baja","zona":"Anfiteatro","ultimo":"03/11/26 11:21","frecuencia":"cada 10-26 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":90,"u":"%","min":90,"max":91},{"c":"SOUND_SPL","n":"Ruido instantáneo","v":43.3,"u":"dB","min":null,"max":null},{"c":"SOUND_LEQ","n":"Ruido medio","v":51.5,"u":"dB","min":21.6,"max":68.2},{"c":"SOUND_MAX","n":"Ruido máximo","v":75.6,"u":"dB","min":null,"max":null}]},{"serie":"24E124743C407378","alias":"Sonido Anfiteatro A","tipo":"Sonómetro","categoria":"SoundMeter","planta":"Planta Baja","zona":"Anfiteatro","ultimo":"03/11/26 11:27","frecuencia":"cada 10-26 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":90,"u":"%","min":90,"max":91},{"c":"SOUND_SPL","n":"Ruido instantáneo","v":38.7,"u":"dB","min":null,"max":null},{"c":"SOUND_LEQ","n":"Ruido medio","v":33.6,"u":"dB","min":20.8,"max":63.9},{"c":"SOUND_MAX","n":"Ruido máximo","v":54.4,"u":"dB","min":null,"max":null}]},{"serie":"24E124743C409849","alias":"Sonido Pre-Hall","tipo":"Sonómetro","categoria":"SoundMeter","planta":"Planta Baja","zona":"Pre-Hall","ultimo":"03/11/26 11:28","frecuencia":"cada 10-26 min","estado":"ok","nota":"","lecturas":[{"c":"Battery","n":"Batería","v":91,"u":"%","min":1,"max":91},{"c":"SOUND_SPL","n":"Ruido instantáneo","v":55.5,"u":"dB","min":null,"max":null},{"c":"SOUND_LEQ","n":"Ruido medio","v":44.6,"u":"dB","min":26.6,"max":61},{"c":"SOUND_MAX","n":"Ruido máximo","v":64.2,"u":"dB","min":null,"max":null}]},{"serie":"24E124757D364092","alias":"Cámara escaleras Sur 1","tipo":"Contador de personas","categoria":"AccessCount","planta":"Planta 1","zona":"Sala Azul","ultimo":"03/11/26 11:24","frecuencia":"cada 10 min","estado":"aviso","nota":"Su cifra se usa también, por error, como «Escalera Norte 1»","lecturas":[{"c":"COUNTER_IN01","n":"Entradas acumuladas","v":1939,"u":"","min":1821,"max":1949},{"c":"COUNTER_OUT01","n":"Salidas acumuladas","v":2054,"u":"","min":1932,"max":2064}]},{"serie":"24E124757E030016","alias":"Cámara entrada Exposiciones","tipo":"Contador de personas","categoria":"AccessCount","planta":"Planta 1","zona":"Entrada Exposiciones","ultimo":"03/11/26 11:23","frecuencia":"cada 10 min","estado":"mal","nota":"Congelada: 241 entradas y 288 salidas fijas toda la semana","lecturas":[{"c":"COUNTER_IN01","n":"Entradas acumuladas","v":241,"u":"","min":241,"max":241},{"c":"COUNTER_OUT01","n":"Salidas acumuladas","v":288,"u":"","min":288,"max":288}]},{"serie":"24E124757E030030","alias":"Cámara puerta 2 Hall","tipo":"Contador de personas","categoria":"AccessCount","planta":"Planta Baja","zona":"Hall Principal","ultimo":"03/11/26 11:23","frecuencia":"cada 10 min","estado":"ok","nota":"","lecturas":[{"c":"COUNTER_IN01","n":"Entradas acumuladas","v":8870,"u":"","min":8527,"max":9053},{"c":"COUNTER_OUT01","n":"Salidas acumuladas","v":9411,"u":"","min":9160,"max":9763}]},{"serie":"24E124757E150064","alias":"Cámara emergencia Sur-Este","tipo":"Contador de personas","categoria":"AccessCount","planta":"Planta Baja","zona":"Puertas emergencia","ultimo":"03/11/26 11:23","frecuencia":"cada 10 min","estado":"ok","nota":"","lecturas":[{"c":"COUNTER_IN01","n":"Entradas acumuladas","v":3968,"u":"","min":3841,"max":4008},{"c":"COUNTER_OUT01","n":"Salidas acumuladas","v":4861,"u":"","min":4699,"max":4895}]},{"serie":"24E124757E151912","alias":"Cámara escaleras Norte 2","tipo":"Contador de personas","categoria":"AccessCount","planta":"Planta 1","zona":"Sala Azul","ultimo":"03/11/26 11:24","frecuencia":"cada 10 min","estado":"ok","nota":"","lecturas":[{"c":"COUNTER_IN01","n":"Entradas acumuladas","v":390,"u":"","min":378,"max":399},{"c":"COUNTER_OUT01","n":"Salidas acumuladas","v":445,"u":"","min":430,"max":454}]},{"serie":"24E124757E151915","alias":"Cámara puerta 3 Hall","tipo":"Contador de personas","categoria":"AccessCount","planta":"Planta Baja","zona":"Hall Principal","ultimo":"29/10/26 18:03","frecuencia":"cada 10 min","estado":"off","nota":"Sin señal desde el 29-10 a las 18:03","lecturas":[{"c":"COUNTER_IN01","n":"Entradas acumuladas","v":1797,"u":"","min":1796,"max":1797},{"c":"COUNTER_OUT01","n":"Salidas acumuladas","v":2250,"u":"","min":2250,"max":2250}]},{"serie":"24E124757E155727","alias":"Cámara 1 Pre-Hall","tipo":"Contador de personas","categoria":"AccessCount","planta":"Planta Baja","zona":"Pre-Hall","ultimo":"03/11/26 11:23","frecuencia":"cada 10 min","estado":"ok","nota":"","lecturas":[{"c":"COUNTER_IN01","n":"Entradas acumuladas","v":4964,"u":"","min":4922,"max":5028},{"c":"COUNTER_OUT01","n":"Salidas acumuladas","v":7830,"u":"","min":7770,"max":8005}]},{"serie":"24E124757E155751","alias":"Cámara 2 Pre-Hall","tipo":"Contador de personas","categoria":"AccessCount","planta":"Planta Baja","zona":"Pre-Hall","ultimo":"03/11/26 11:23","frecuencia":"cada 10 min","estado":"ok","nota":"","lecturas":[{"c":"COUNTER_IN01","n":"Entradas acumuladas","v":10873,"u":"","min":10269,"max":11065},{"c":"COUNTER_OUT01","n":"Salidas acumuladas","v":17498,"u":"","min":16876,"max":18024}]},{"serie":"8C83FC05008528B4","alias":"Contador agua","tipo":"Contador de agua","categoria":"WaterMeter","planta":"Sótano","zona":"Sótano","ultimo":"03/11/26 00:15","frecuencia":"cada 8-11 h","estado":"mal","nota":"Envía cifras imposibles (hasta 2.950 millones de L) y solo cada 8-11 h","lecturas":[{"c":"CURRENT_VOLUME","n":"Litros acumulados","v":267119,"u":"L","min":261327,"max":2950344107}]},{"serie":"WEATHER_STATION","alias":"Meteorológica Azotea Norte","tipo":"Estación meteorológica","categoria":"WeatherObserved","planta":"Azotea","zona":"Azotea","ultimo":"03/11/26 11:29","frecuencia":"cada 5 min","estado":"aviso","nota":"Sensor de luz bloqueado en 223,91 lux desde el 1-10","lecturas":[{"c":"Temperature","n":"Temperatura","v":19.58,"u":"°C","min":14.5,"max":25.5},{"c":"Humidity","n":"Humedad","v":66.91,"u":"%","min":39.3,"max":84},{"c":"Pressure","n":"Presión","v":1011.6,"u":"hPa","min":1011.2,"max":1019.3},{"c":"SPEED_AVG","n":"Viento","v":0,"u":"m/s","min":0,"max":4.2},{"c":"ANGLE_AVG","n":"Dirección del viento","v":185.1,"u":"°","min":null,"max":null},{"c":"RAINFALL","n":"Lluvia","v":0,"u":"mm","min":0,"max":0},{"c":"SOLAR_RADIATION","n":"Radiación solar","v":147,"u":"W/m²","min":0,"max":525},{"c":"Illumination","n":"Luz","v":223.91,"u":"lux","min":223.9,"max":223.9}]}];
+const EDIFICIO = {"ancho_m":119.3,"fondo_m":77,"partes":[{"sobre":2,"bajo":0,"anillos":[[[-25.48,-36.16],[-36.97,-35.58],[-36.8,-32.35],[-35.96,-10.68],[-35.09,14.07],[-33.85,38.49],[-22.29,37.91],[-25.48,-36.16]]]},{"sobre":1,"bajo":1,"anillos":[[[-48.91,-9.7],[-48.67,-5.65],[-56.79,-5.41],[-59.65,-5.33],[-59.6,-3.88],[-59.18,10.51],[-47.83,10.18],[-47.7,14.72],[-35.09,14.07],[-35.96,-10.68],[-43.6,-10.09],[-48.52,-9.84],[-48.91,-9.7]]]},{"sobre":1,"bajo":0,"anillos":[[[-36.8,-32.35],[-44.72,-31.95],[-43.6,-10.09],[-35.96,-10.68],[-36.8,-32.35]]]},{"sobre":2,"bajo":1,"anillos":[[[21.78,-12.08],[20.45,-38.48],[-25.48,-36.16],[-22.29,37.91],[24.24,35.56],[22.9,10.48],[28.65,10.14],[27.84,-7.92],[22.2,-7.4],[21.78,-12.08]]]},{"sobre":1,"bajo":1,"anillos":[[[27.65,-12.38],[21.78,-12.08],[22.2,-7.4],[27.84,-7.92],[27.65,-12.38]]]},{"sobre":1,"bajo":0,"anillos":[[[45.77,6.81],[55.93,6.23],[59.65,-11.76],[42.46,-10.77],[42.73,6.89],[45.77,6.81]]]},{"sobre":2,"bajo":0,"anillos":[[[38.91,-14.31],[45.17,-34.65],[26.57,-33.71],[27.58,-13.79],[38.91,-14.31]]]},{"sobre":3,"bajo":0,"anillos":[[[38.91,-14.31],[27.58,-13.79],[27.65,-12.38],[27.84,-7.92],[28.65,10.14],[28.71,11.06],[40.41,10.45],[40.23,6.95],[42.73,6.89],[42.46,-10.77],[39.3,-10.59],[38.91,-14.31]]]},{"sobre":1,"bajo":0,"anillos":[[[42.73,6.89],[40.23,6.95],[40.41,10.45],[28.71,11.06],[29.15,18.56],[46.39,17.57],[45.77,6.81],[42.73,6.89]]]}]};
+const ZONAS = {"Sótano":[{"clave":"Sótano","nombre":"Sótano","x0":2,"x1":18,"y0":-20,"y1":-6,"color":"#0f8aa8"}],"Planta Baja":[{"clave":"Anfiteatro","nombre":"Anfiteatros A, B y C","x0":-20,"x1":3,"y0":-28,"y1":28,"color":"#1044CD"},{"clave":"Hall Principal","nombre":"Hall Principal","x0":6,"x1":20,"y0":-28,"y1":28,"color":"#0f8aa8"},{"clave":"Pre-Hall","nombre":"Pre-Hall (entrada)","x0":29,"x1":45,"y0":-30,"y1":8,"color":"#7c5cd6"},{"clave":"Oficinas","nombre":"Oficinas","x0":-57,"x1":-39,"y0":-8,"y1":12,"color":"#d98a00"},{"clave":"Puertas emergencia","nombre":"Puertas de emergencia","x0":3,"x1":19,"y0":-38,"y1":-33,"color":"#d64545","fijos":{"24E124136B503963":[16,-36],"24E124757E150064":[11,-36],"24E124136B504850":[6,-36],"24E124136B503964":[16,34],"24E124136B504915":[46,-22]}}],"Planta 1":[{"clave":"Sala Exposiciones","nombre":"Sala de Exposiciones","x0":-21,"x1":19,"y0":-32,"y1":32,"color":"#1044CD"},{"clave":"Entrada Exposiciones","nombre":"Entrada a Exposiciones y terraza","x0":-34,"x1":-25,"y0":-30,"y1":34,"color":"#7c5cd6"},{"clave":"Sala Azul","nombre":"Sala Azul y escaleras","x0":29,"x1":39,"y0":-10,"y1":11,"color":"#0f8aa8"}],"Azotea":[{"clave":"Azotea","nombre":"Azotea","x0":-20,"x1":19,"y0":-30,"y1":30,"color":"#1f9d6b","techo":2,"fijos":{"WEATHER_STATION":[-4,24],"0004A30B017559CE":[6,24],"0004A30B01757A3A":[0,-24]}}]};
+const VIVO = {"proxy":"https://iotsens-palacio-congresos.josemariahf612.workers.dev","tenant":"d494ce35-8330-4b4f-b91c-b520544ca72e","org":"d127fa54-70db-4556-9c39-c600d26c956e","device":"e89145a0-ba40-4a65-96ae-bd1d12119062"};
+
+const ESTADOS = {
+  ok:{t:"Funciona bien", c:"--ok"}, aviso:{t:"Con incidencia", c:"--aviso"},
+  dudoso:{t:"Dudoso", c:"--dudoso"}, mal:{t:"Datos erróneos", c:"--mal"}, off:{t:"Sin señal", c:"--off"}
+};
+const PLANTAS = ["Azotea","Planta 1","Planta Baja","Sótano"];
+const NIVEL = {"Sótano":-1,"Planta Baja":0,"Planta 1":1,"Azotea":2};
+const H = 5;   // metros por planta (supuesto: el Catastro da el número de plantas, no la altura)
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const QUE_MIDE = {
+  "Contador de personas":"Cuenta las personas que entran y salen por un punto de paso.",
+  "Sensor de puerta":"Detecta si la puerta está abierta o cerrada. También mide temperatura y humedad.",
+  "Ambiente":"Mide temperatura, humedad y CO₂ (indica si la sala está bien ventilada).",
+  "Sonómetro":"Mide el nivel de ruido en decibelios.",
+  "Calidad del aire":"Mide gases contaminantes y partículas en el aire exterior.",
+  "Estación meteorológica":"Mide temperatura, humedad, viento, lluvia, sol y presión.",
+  "Contador de agua":"Mide los litros de agua que consume el edificio."
+};
+const TIPOS = [...new Set(SENSORES.map(s => s.tipo))];
+
+const _pq = new URLSearchParams(location.search).get("planta");
+let filtro = {tipo:new Set(), estado:new Set(), planta:["Todas","Azotea","Planta 1","Planta Baja","Sótano"].includes(_pq) ? _pq : "Planta Baja", texto:""};
+let seleccionado = null;
+
+/* ---------- filtros y lista ---------- */
+function chips(id, valores, clave, etiqueta, color){
+  const el = document.getElementById(id); el.innerHTML = "";
+  valores.forEach(v => {
+    const b = document.createElement("button"); b.className = "chip"; b.textContent = etiqueta(v);
+    if (color) b.style.borderColor = css(color(v));
+    b.onclick = () => { filtro[clave].has(v) ? filtro[clave].delete(v) : filtro[clave].add(v); b.classList.toggle("on"); pintar(); };
+    el.appendChild(b);
+  });
+}
+chips("fTipo", TIPOS, "tipo", v => v);
+chips("fEstado", Object.keys(ESTADOS), "estado", v => ESTADOS[v].t, v => ESTADOS[v].c);
+const fP = document.getElementById("fPlanta");
+["Todas", ...PLANTAS].forEach(p => {
+  const b = document.createElement("button"); b.className = "chip" + (p===filtro.planta?" on":""); b.textContent = p;
+  b.onclick = () => { filtro.planta = p; [...fP.children].forEach(x => x.classList.toggle("on", x===b)); pintar(); encuadrar(); };
+  fP.appendChild(b);
+});
+document.getElementById("buscar").oninput = e => { filtro.texto = e.target.value.toLowerCase(); pintar(); };
+function leyenda(){
+  document.getElementById("leyenda").innerHTML = Object.entries(ESTADOS).map(([k,v]) =>
+    `<span><i class="punto" style="margin:0;background:${css(v.c)}"></i>${v.t} (${SENSORES.filter(s=>s.estado===k).length})</span>`).join("");
+}
+const visible = s =>
+  (!filtro.tipo.size || filtro.tipo.has(s.tipo)) &&
+  (!filtro.estado.size || filtro.estado.has(s.estado)) &&
+  (filtro.planta==="Todas" || s.planta===filtro.planta) &&
+  (!filtro.texto || (s.alias+" "+s.zona+" "+s.serie+" "+s.planta).toLowerCase().includes(filtro.texto));
+
+function pintarLista(){
+  const el = document.getElementById("lista"); el.innerHTML = "";
+  PLANTAS.forEach(p => {
+    const de = SENSORES.filter(s => s.planta===p && visible(s));
+    if (!de.length) return;
+    el.insertAdjacentHTML("beforeend", `<div class="grupo">${p} · ${de.length}</div>`);
+    de.sort((a,b) => a.zona.localeCompare(b.zona) || a.alias.localeCompare(b.alias)).forEach(s => {
+      const d = document.createElement("div"); d.className = "item" + (s===seleccionado?" sel":"");
+      d.innerHTML = `<i class="punto" style="background:${css(ESTADOS[s.estado].c)}"></i><div><b>${s.alias}</b><small>${s.tipo} · ${s.zona}</small></div>`;
+      d.onclick = () => elegir(s, true); el.appendChild(d);
+    });
+  });
+}
+
+/* ---------- ficha ---------- */
+const fmt = v => typeof v === "number" ? v.toLocaleString("es-ES",{maximumFractionDigits:2}) : (v ?? "—");
+function ficha(){
+  const el = document.getElementById("ficha");
+  if (!seleccionado){
+    const n = k => SENSORES.filter(s=>s.estado===k).length;
+    el.innerHTML = `<h2>Resumen</h2><div class="sub">Pulsa un sensor en el edificio o en la lista para ver su ficha. Arrastra para girar; rueda para acercar.</div>
+      <div class="resumen"><div><b>${SENSORES.length}</b>sensores</div><div><b style="color:${css("--ok")}">${n("ok")}</b>funcionan bien</div>
+      <div><b style="color:${css("--mal")}">${n("mal")+n("off")}</b>sin señal o con datos erróneos</div><div><b style="color:${css("--aviso")}">${n("aviso")+n("dudoso")}</b>con incidencia o dudosos</div></div>
+      <table><tr><th>Tipo</th><th class="n">Nº</th></tr>${TIPOS.map(t=>`<tr><td>${t}<br><small style="color:var(--suave)">${QUE_MIDE[t]||""}</small></td><td class="n">${SENSORES.filter(s=>s.tipo===t).length}</td></tr>`).join("")}</table>`;
+    return;
+  }
+  const s = seleccionado, e = ESTADOS[s.estado];
+  el.innerHTML = `<h2>${s.alias}</h2><div class="sub">${s.tipo} · ${s.zona} · ${s.planta}</div>
+    <span class="estado" style="background:${css(e.c)}">${e.t}</span>
+    ${s.nota ? `<div class="nota" style="border-color:${css(e.c)}">${s.nota}</div>` : ""}
+    <div class="meta"><div>Qué mide</div><div>${QUE_MIDE[s.tipo]||""}</div>
+      <div>Envía datos</div><div>${s.frecuencia}</div><div>Último dato</div><div>${s.ultimo}</div>
+      <div>Nº de serie</div><div>${s.serie}</div><div>Categoría</div><div>${s.categoria}</div></div>
+    <table><tr><th>Medida</th><th class="n">Última</th><th class="n">Mín.</th><th class="n">Máx.</th></tr>
+    ${s.lecturas.map(l=>`<tr><td>${l.n}</td><td class="n">${fmt(l.v)} ${l.u}</td><td class="n">${fmt(l.min)}</td><td class="n">${fmt(l.max)}</td></tr>`).join("")}</table>`;
+}
+function elegir(s, desdeLista){
+  seleccionado = (seleccionado===s && !desdeLista) ? null : s;
+  if (seleccionado && desdeLista && filtro.planta!=="Todas" && filtro.planta!==s.planta){
+    filtro.planta = s.planta; [...fP.children].forEach(x => x.classList.toggle("on", x.textContent===s.planta)); encuadrar();
+  }
+  pintar();
+}
+
+/* ---------- escena 3D: el edificio real del Catastro ---------- */
+const cont = document.getElementById("escena");
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2)); cont.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camara = new THREE.PerspectiveCamera(38, 1, 1, 2000);
+const controles = new THREE.OrbitControls(camara, renderer.domElement);
+controles.enableDamping = true; controles.maxPolarAngle = Math.PI*0.48; controles.minDistance = 40; controles.maxDistance = 420;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa7b8, 0.95));
+const sol = new THREE.DirectionalLight(0xffffff, 0.55); sol.position.set(-60,120,80); scene.add(sol);
+
+// UTM: x = este, y = norte  →  escena: x = este, z = -norte
+const forma = anillo => { const s = new THREE.Shape(); anillo.forEach(([x,y],i) => i ? s.lineTo(x,y) : s.moveTo(x,y)); return s; };
+function prisma(anillo, z0, alto, mat){
+  const g = new THREE.ExtrudeGeometry(forma(anillo), {depth:alto, bevelEnabled:false});
+  g.rotateX(-Math.PI/2); g.translate(0, z0, 0);
+  return new THREE.Mesh(g, mat);
+}
+const suelo = new THREE.Mesh(new THREE.CircleGeometry(160, 64), new THREE.MeshLambertMaterial({color:0xaab59f}));
+suelo.rotation.x = -Math.PI/2; suelo.position.y = -0.05; scene.add(suelo);
+const rejilla = new THREE.GridHelper(320, 32, 0x98a38d, 0x98a38d); rejilla.position.y = 0; scene.add(rejilla);
+
+const losas = {Sótano:[], "Planta Baja":[], "Planta 1":[], Azotea:[]}, volumenes = [];
+const matVol = new THREE.MeshLambertMaterial({color:0xb9c6d8, transparent:true, opacity:0.18, depthWrite:false, side:THREE.DoubleSide});
+const matLosa = new THREE.MeshLambertMaterial({color:0xfbfaf7});
+const matLosaSot = new THREE.MeshLambertMaterial({color:0xe9e3d6});
+const matCubierta = new THREE.MeshLambertMaterial({color:0xd5dce6});
+const matBorde = new THREE.LineBasicMaterial({color:0x5b6b80, transparent:true, opacity:0.6});
+EDIFICIO.partes.forEach(p => p.anillos.forEach(a => {
+  const z0 = -p.bajo*H, alto = (p.sobre+p.bajo)*H;
+  const vol = prisma(a, z0, alto, matVol); scene.add(vol); volumenes.push(vol);
+  const bordes = new THREE.LineSegments(new THREE.EdgesGeometry(vol.geometry, 30), matBorde); scene.add(bordes); volumenes.push(bordes);
+  for (let f = -p.bajo; f < p.sobre; f++){
+    const planta = f<0 ? "Sótano" : f===0 ? "Planta Baja" : "Planta 1";
+    if (f>1) continue;          // la 3.ª planta del cuerpo de la Sala Azul no tiene sensores
+    const losa = prisma(a, f*H, 0.35, f<0?matLosaSot:matLosa); scene.add(losa); losas[planta].push(losa);
+    const borde = new THREE.LineSegments(new THREE.EdgesGeometry(losa.geometry), new THREE.LineBasicMaterial({color:0x3d4a5c})); scene.add(borde); losas[planta].push(borde);
+  }
+  const cub = prisma(a, p.sobre*H, 0.3, matCubierta); scene.add(cub); losas.Azotea.push(cub);
+  const bc = new THREE.LineSegments(new THREE.EdgesGeometry(cub.geometry), new THREE.LineBasicMaterial({color:0x3d4a5c})); scene.add(bc); losas.Azotea.push(bc);
+  cub.userData.cubiertaDe = p.sobre;
+}));
+
+// zonas (rectángulos en metros) y sensores
+const etiquetas = [], marcadores = [], cajasZona = [];
+const yPlanta = (p, z) => p==="Azotea" ? (z?.techo ?? 2)*H + 0.3 : NIVEL[p]*H + 0.35;
+PLANTAS.forEach(p => (ZONAS[p]||[]).forEach(z => {
+  const w = z.x1-z.x0, d = z.y1-z.y0, y = yPlanta(p, z);
+  const g = new THREE.BoxGeometry(w, 2.4, d);
+  const col = new THREE.Color(z.color);
+  const caja = new THREE.Mesh(g, new THREE.MeshLambertMaterial({color:col, transparent:true, opacity:0.16, depthWrite:false}));
+  caja.position.set((z.x0+z.x1)/2, y+1.2, -(z.y0+z.y1)/2); scene.add(caja);
+  const b = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({color:col}));
+  b.position.copy(caja.position); scene.add(b);
+  cajasZona.push({p, objs:[caja,b]});
+  const et = document.createElement("div"); et.className = "etiq"; et.textContent = z.nombre; cont.appendChild(et);
+  etiquetas.push({el:et, p, pos:caja.position.clone().add(new THREE.Vector3(0,2.2,0))});
+}));
+const geo = new THREE.SphereGeometry(1.15, 20, 14);
+PLANTAS.forEach(p => {
+  const porZona = {};
+  SENSORES.filter(s=>s.planta===p).forEach(s => (porZona[s.zona] ??= []).push(s));
+  Object.entries(porZona).forEach(([zona, lista]) => {
+    const z = (ZONAS[p]||[]).find(z=>z.clave===zona);
+    const libres = lista.filter(s => !z?.fijos?.[s.serie]);
+    const w = z.x1-z.x0, d = z.y1-z.y0;
+    const cols = Math.max(1, Math.round(Math.sqrt(libres.length*w/d))), filas = Math.ceil(libres.length/cols);
+    lista.forEach(s => {
+      let x, y;
+      const fijo = z?.fijos?.[s.serie];
+      if (fijo){ [x,y] = fijo; }
+      else { const i = libres.indexOf(s), c = i%cols, f = Math.floor(i/cols);
+        x = z.x0 + w*(c+0.5)/cols; y = z.y1 - d*(f+0.5)/filas; }
+      const base = yPlanta(p, z);
+      const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color:new THREE.Color(css(ESTADOS[s.estado].c))}));
+      m.position.set(x, base+3.1, -y); m.userData.s = s; scene.add(m); marcadores.push(m);
+      const palo = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,3,6), new THREE.MeshBasicMaterial({color:0x7d8796}));
+      palo.position.set(x, base+1.5, -y); scene.add(palo); m.userData.palo = palo;
+    });
+  });
+});
+// norte
+const etN = document.createElement("div"); etN.className = "etiq norte"; etN.textContent = "N ↑"; cont.appendChild(etN);
+etiquetas.push({el:etN, p:null, pos:new THREE.Vector3(0, 0.5, -EDIFICIO.fondo_m/2-14)});
+
+function encuadrar(){
+  const p = filtro.planta;
+  if (p==="Todas"){ camara.position.set(120, 115, 140); controles.target.set(0, 4, 0); }
+  else { const y = p==="Azotea" ? 2*H : NIVEL[p]*H; camara.position.set(40, y+125, 95); controles.target.set(0, y, 0); }
+  controles.update();
+}
+function pintar(){
+  const p = filtro.planta;
+  // en una planta concreta se ocultan las de encima para ver el interior
+  const tope = p==="Todas" ? 99 : (p==="Azotea" ? 99 : NIVEL[p]);
+  Object.entries(losas).forEach(([pl, arr]) => arr.forEach(m => {
+    if (pl==="Azotea") m.visible = p==="Todas" || p==="Azotea";
+    else m.visible = NIVEL[pl] <= tope;
+    
+  }));
+  volumenes.forEach(v => v.visible = p==="Todas" || p==="Azotea");
+  cajasZona.forEach(z => z.objs.forEach(o => o.visible = p==="Todas" || z.p===p));
+  marcadores.forEach(m => {
+    const s = m.userData.s, v = visible(s);
+    m.visible = m.userData.palo.visible = v;
+    m.scale.setScalar(s===seleccionado ? 1.9 : 1);
+    m.material.color.set(css(ESTADOS[s.estado].c));
+  });
+  pintarLista(); ficha(); leyenda();
+}
+
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+let abajo = null;
+renderer.domElement.addEventListener("pointerdown", e => abajo = [e.clientX, e.clientY]);
+renderer.domElement.addEventListener("pointerup", e => {
+  if (!abajo || Math.hypot(e.clientX-abajo[0], e.clientY-abajo[1]) > 5) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ptr.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
+  ray.setFromCamera(ptr, camara);
+  const hit = ray.intersectObjects(marcadores.filter(m=>m.visible))[0];
+  if (hit) elegir(hit.object.userData.s); else if (seleccionado){ seleccionado = null; pintar(); }
+});
+function tam(){ const r = cont.getBoundingClientRect(); renderer.setSize(r.width, r.height); camara.aspect = r.width/r.height; camara.updateProjectionMatrix(); }
+addEventListener("resize", tam); tam(); encuadrar(); pintar();
+const v = new THREE.Vector3();
+(function bucle(){
+  requestAnimationFrame(bucle); controles.update(); renderer.render(scene, camara);
+  const r = cont.getBoundingClientRect();
+  etiquetas.forEach(t => {
+    const on = t.p===null || filtro.planta===t.p;   // en «Todas» los nombres de sala se solapan
+    v.copy(t.pos).project(camara);
+    const dentro = on && v.z < 1 && Math.abs(v.x) < 1.02 && Math.abs(v.y) < 1.02;
+    t.el.style.display = dentro ? "block" : "none";
+    if (dentro){ t.el.style.left = ((v.x+1)/2*r.width)+"px"; t.el.style.top = ((1-v.y)/2*r.height)+"px"; }
+  });
+})();
+
+/* ---------- datos en vivo (a través del proxy de la pantalla) ---------- */
+const OCULTAR = /SOUND_P|SOUND_MIN|BOARD_VOLTAGE|DELTA_VOLUME|LOG_|CURRENT_TIME|STATUS|ESTIMATED|HOURLY|DAILY|PARTIAL/;
+async function enVivo(){
+  const ind = document.getElementById("vivo");
+  try{
+    const url = `${VIVO.proxy}/v1/catalog/tenants/${VIVO.tenant}/organizations/${VIVO.org}/devices/${VIVO.device}`;
+    const r = await fetch(url, {cache:"no-store"}); if (!r.ok) throw new Error(r.status);
+    const d = await r.json(), medidas = d.deviceMeasurements || [];
+    const ahora = Date.now();
+    SENSORES.forEach(s => {
+      const ms = medidas.filter(m => (m.name||"").startsWith(s.serie) && !OCULTAR.test(m.name));
+      let ult = 0;
+      s.lecturas.forEach(l => {
+        const m = ms.find(m => m.measurementType?.sensor===l.c); if (!m) return;
+        const x = parseFloat(m.lastValueReported); if (Number.isFinite(x)) l.v = +x.toFixed(2);
+        const t = Date.parse(String(m.dateLastValueReported).replace(" ","T")); if (t>ult) ult = t;
+      });
+      if (ult){
+        s.ultimo = new Date(ult).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+        // sin señal: más de 3 h sin datos (12 h para el contador de agua, que envía cada 8 h)
+        const limite = s.categoria==="WaterMeter" ? 12 : 3;
+        if ((ahora-ult)/36e5 > limite){ s.estado = "off"; s.nota = `Sin señal desde el ${s.ultimo}` + (s.notaFija ? `. ${s.notaFija}` : ""); }
+        else if (s.estado==="off"){ s.estado = s.estadoFijo==="off" ? "ok" : s.estadoFijo; s.nota = s.notaFija; }
+      }
+    });
+    ind.classList.add("on"); ind.querySelector("span").textContent = "Datos en vivo · " + new Date().toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
+    pintar();
+  }catch(e){
+    ind.classList.remove("on"); ind.querySelector("span").textContent = "Sin conexión con la plataforma: datos del 3-11-2026";
+  }
+}
+SENSORES.forEach(s => { s.estadoFijo = s.estado; s.notaFija = s.estado==="off" ? "" : s.nota; });
+if (VIVO.proxy){ enVivo(); setInterval(enVivo, 5*60000); }
+</script>
+</body>
+</html>
