@@ -91,7 +91,9 @@ export function Carrusel({ sensores, kpis, seriesKpi, semanaCo2, conexion, ahora
         <span>
           {conexion === "demo"
             ? "DATOS SIMULADOS · sin conexión con la plataforma"
-            : "Fuente: plataforma IoTsens"}
+            : conexion === "error"
+              ? <b className="text-[var(--aviso)]">Sin conexión · últimos datos recibidos</b>
+              : "Fuente: plataforma IoTsens"}
         </span>
         <span className="cifras">Actualizado {hora(inicioCiclo)}</span>
       </footer>

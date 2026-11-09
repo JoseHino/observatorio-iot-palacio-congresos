@@ -38,13 +38,16 @@ export const CONFIG = {
    * (30-10 a 1-11-2026), y el consumo real ronda los 100-6.000 L.
    */
   aguaMaximaDiaria: 100000,
+  /** Cada cuánto se vuelven a pedir los históricos de 24 h y las series de 14 días. */
+  minutosHistorico: 10,
   /** Días que abarca la diapositiva de ventilación, y cada cuánto se piden. */
   diasVentilacion: 7,
   minutosSemana: 30,
   /** Cada cuánto se recalcula lo que va de día a partir de los KPI horarios. */
   minutosHoy: 10,
 
-  /** 'auto' = datos reales si hay proxy; si no, demo. 'si' = fuerza demo. 'no' = nunca demo. */
+  /** 'auto' = datos reales si hay proxy; si no, demo. 'si' = fuerza demo. 'no' = nunca demo.
+   *  Un corte de conexión ya no pasa a demo en ningún caso: se quedan los últimos datos reales. */
   modoDemo: "auto" as "auto" | "si" | "no",
 }
 

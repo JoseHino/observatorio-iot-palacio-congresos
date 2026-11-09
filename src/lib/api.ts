@@ -61,10 +61,17 @@ interface PuntoApi {
   value?: string | number
 }
 
-async function api<T>(ruta: string): Promise<T> {
-  const r = await fetch(CONFIG.proxy.replace(/\/$/, "") + ruta, { cache: "no-store" })
-  if (!r.ok) throw new Error(`${r.status} en ${ruta}`)
-  return (await r.json()) as T
+async function api<T>(ruta: string, intentos = 2): Promise<T> {
+  try {
+    const r = await fetch(CONFIG.proxy.replace(/\/$/, "") + ruta, { cache: "no-store" })
+    if (!r.ok) throw new Error(`${r.status} en ${ruta}`)
+    return (await r.json()) as T
+  } catch (e) {
+    // Un corte puntual de red se reintenta una vez antes de darlo por fallido.
+    if (intentos <= 1) throw e
+    await new Promise((ok) => setTimeout(ok, 1500))
+    return api<T>(ruta, intentos - 1)
+  }
 }
 
 const baseCatalogo = (): string =>

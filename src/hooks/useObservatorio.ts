@@ -84,6 +84,13 @@ export function useObservatorio(): Observatorio {
   const [semanaCo2, setSemanaCo2] = useState<Map<string, Punto[]>>(new Map())
   // Las series de una semana pesan: se piden cada media hora, no cada minuto.
   const ultimaSemana = useRef(0)
+  // Históricos de 24 h y series de 14 días: cambian despacio, así que se
+  // piden cada `minutosHistorico` y no en cada refresco de un minuto. Antes
+  // eran ~30 peticiones por minuto y por pantalla abierta.
+  const ultimoHistorico = useRef(0)
+  const historicosPrevios = useRef<Map<string, Punto[]>>(new Map())
+  // Hora de la última lectura buena, para avisar si se corta la conexión.
+  const ultimoBueno = useRef(0)
   const [conexion, setConexion] = useState<EstadoConexion>("cargando")
   const [aviso, setAviso] = useState("")
   const [inicioCiclo, setInicioCiclo] = useState(() => Date.now())
@@ -130,20 +137,29 @@ export function useObservatorio(): Observatorio {
         )
 
       const hasta = Date.now()
-      const desde = hasta - CONFIG.horasHistorico * 3600000
-      const series = await enTanda(clasificados.slice(0, 24), async (s) => {
-        try {
-          return [s.uuid, await leerHistorico(s, desde, hasta, modoDemo.current)] as const
-        } catch {
-          return [s.uuid, [] as Punto[]] as const
-        }
-      })
+      const tocaHistorico = hasta - ultimoHistorico.current > CONFIG.minutosHistorico * 60000
+      if (tocaHistorico) {
+        ultimoHistorico.current = hasta
+        const desde = hasta - CONFIG.horasHistorico * 3600000
+        const series = await enTanda(clasificados.slice(0, 24), async (s) => {
+          try {
+            return [s.uuid, await leerHistorico(s, desde, hasta, modoDemo.current)] as const
+          } catch {
+            // Si falla uno, se conserva lo que ya había de ese sensor.
+            return [s.uuid, historicosPrevios.current.get(s.uuid) ?? ([] as Punto[])] as const
+          }
+        })
+        historicosPrevios.current = new Map(series)
+        setHistoricos(historicosPrevios.current)
+      }
 
       setSensores(clasificados)
       setKpis(indicadores)
-      setHistoricos(new Map(series))
       setConexion(modoDemo.current ? "demo" : "vivo")
       setInicioCiclo(Date.now())
+      ultimoBueno.current = Date.now()
+      if (!modoDemo.current) setAviso("")
+      if (!tocaHistorico) return
 
       // Las series de varios días se piden aparte y sin bloquear el resto:
       // son las únicas que miran más allá de las últimas 24 h.
@@ -180,22 +196,20 @@ export function useObservatorio(): Observatorio {
         }).then((series) => setSemanaCo2(new Map(series)))
       }
     } catch (e) {
-      const mensaje = e instanceof Error ? e.message : String(e)
       console.error("[observatorio]", e)
-
-      // Si la plataforma falla y el modo es 'auto', la pantalla no se queda
-      // en blanco: cae a demostración avisando de que las cifras no son reales.
-      if (CONFIG.modoDemo === "auto" && !modoDemo.current) {
-        modoDemo.current = true
-        setAviso(
-          "La plataforma IoT no responde. La pantalla muestra datos de demostración " +
-            "hasta recuperar la conexión.",
-        )
-        return actualizar()
-      }
-
+      // Un fallo de conexión NO pasa nunca a datos simulados: antes bastaba un
+      // solo corte para que la pantalla enseñara cifras inventadas hasta
+      // recargarla. Ahora se quedan los últimos datos reales, se avisa y se
+      // reintenta en el siguiente ciclo.
       setConexion("error")
-      setAviso(`No se han podido leer los sensores: ${mensaje}. Se reintenta automáticamente.`)
+      const desde = ultimoBueno.current
+        ? new Date(ultimoBueno.current).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })
+        : ""
+      setAviso(
+        desde
+          ? `Sin conexión con la plataforma desde las ${desde}. Se muestran los últimos datos recibidos y se reintenta cada minuto.`
+          : "No se puede conectar con la plataforma de sensores. Se reintenta cada minuto.",
+      )
     }
   }, [])
 
