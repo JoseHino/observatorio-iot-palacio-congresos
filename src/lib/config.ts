@@ -38,6 +38,9 @@ export const CONFIG = {
    * (30-10 a 1-11-2026), y el consumo real ronda los 100-6.000 L.
    */
   aguaMaximaDiaria: 100000,
+  /** Días que abarca la diapositiva de ventilación, y cada cuánto se piden. */
+  diasVentilacion: 7,
+  minutosSemana: 30,
   /** Cada cuánto se recalcula lo que va de día a partir de los KPI horarios. */
   minutosHoy: 10,
 
@@ -155,6 +158,30 @@ export const EQUIPOS = {
  * escaleras Norte 1 de verdad (24E124614C471012) no la recoge ningún KPI.
  */
 export const KPIS_DUPLICADOS = /_ESCALERA_NORTE_1$/
+
+/**
+ * Medidas en revisión: la revisión de la plataforma (3-11 y 9-11-2026)
+ * comprobó que dan cifras imposibles o que no cambian nunca. Se siguen
+ * enseñando en el cuadro de mando, rotuladas «En revisión», pero no entran
+ * en ninguna media ni en ninguna cifra para el público.
+ *
+ * Clave: número de serie del equipo. `codigos` limita la marca a esas
+ * medidas (de la sonda de Exposiciones solo falla el CO₂; su temperatura
+ * es buena). Cuando Nealis corrija un equipo, se quita de aquí.
+ */
+export const EN_REVISION: Record<string, { codigos?: RegExp; motivo: string }> = {
+  "24E124725F202568": { codigos: /^co2$/i, motivo: "CO₂ por debajo del aire exterior" },
+  "24E124725F204685": { codigos: /^co2$/i, motivo: "CO₂ por debajo del aire exterior" },
+  "24E124725F202145": { codigos: /^co2$/i, motivo: "CO₂ por debajo del aire exterior" },
+  WEATHER_STATION: { codigos: /^illumination$/i, motivo: "Luz bloqueada en 223,91 lux desde el 1-10" },
+  "24E124757E030016": { motivo: "Contador congelado desde el 27-10" },
+}
+
+/** Cámara de la Puerta 3 del Hall: entra en el total de la puerta principal. */
+export const CAMARA_PUERTA_3 = "24E124757E151915"
+
+/** CO₂ a partir del cual una sala se considera mal ventilada (referencia orientativa). */
+export const CO2_MAL_VENTILADA = 1200
 
 /* ------------------------------------------------------------------
    Familias de equipo.

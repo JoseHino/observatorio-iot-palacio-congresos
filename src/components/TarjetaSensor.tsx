@@ -107,6 +107,7 @@ export function TarjetaSensor({ sensor, serie }: { sensor: Sensor; serie: Punto[
           <span
             className="rounded-full px-[0.7em] py-[0.25em] text-[0.92em] font-bold text-[var(--color)]"
             style={{ background: "color-mix(in srgb, var(--color) 16%, transparent)" }}
+            title={sensor.revision}
           >
             {estado.etiqueta}
           </span>

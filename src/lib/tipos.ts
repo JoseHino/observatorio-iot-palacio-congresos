@@ -108,6 +108,8 @@ export interface MedidaCruda {
 export interface Sensor extends MedidaCruda {
   tipo: TipoSensor
   estado: Estado
+  /** Motivo por el que la medida está en revisión (no entra en medias). */
+  revision?: string
 }
 
 /**

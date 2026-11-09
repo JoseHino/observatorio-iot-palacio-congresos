@@ -40,7 +40,7 @@ function Panel({ titulo, children, className }: {
 }
 
 export default function App() {
-  const { sensores, kpis, seriesKpi, historicos, conexion, aviso, inicioCiclo, actualizar } =
+  const { sensores, kpis, seriesKpi, historicos, semanaCo2, conexion, aviso, inicioCiclo, actualizar } =
     useObservatorio()
   const ahora = useReloj()
   const [, alternarTema] = useTema()
@@ -84,6 +84,7 @@ export default function App() {
         sensores={sensores}
         kpis={kpis}
         seriesKpi={seriesKpi}
+        semanaCo2={semanaCo2}
         conexion={conexion}
         ahora={ahora}
         inicioCiclo={inicioCiclo}

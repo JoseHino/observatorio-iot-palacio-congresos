@@ -3,20 +3,22 @@
    Cada una responde a una pregunta sola: cuánta gente ha entrado, cómo se
    está dentro, qué aire hay, qué tiempo hace, cuánta agua se gasta. */
 
-import { Droplets, DoorOpen, Footprints, Gauge, Sun, Thermometer, Users, Volume2, Wind } from "lucide-react"
+import { Clock, Droplets, DoorOpen, Footprints, Gauge, Sun, Thermometer, TriangleAlert, Users, Volume2, Wind } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { GraficaDiaria } from "@/components/carrusel/GraficaDiaria"
 import { Barras, CifraGrande, FilaCifras, RejillaLecturas, SinDatos } from "@/components/carrusel/piezas"
 import { puntosDePaso } from "@/components/PanelAforo"
-import { CONFIG, EQUIPOS } from "@/lib/config"
-import { esCreible } from "@/lib/formato"
+import { CAMARA_PUERTA_3, CO2_MAL_VENTILADA, CONFIG, EQUIPOS } from "@/lib/config"
+import { esCreible, num } from "@/lib/formato"
 import type { Kpi, Punto, Sensor } from "@/lib/tipos"
 
 export interface DatosDiapositiva {
   sensores: Sensor[]
   kpis: Kpi[]
   seriesKpi: Map<string, Punto[]>
+  /** CO₂ de la última semana de cada sonda interior fiable, por uuid. */
+  semanaCo2: Map<string, Punto[]>
 }
 
 export interface Diapositiva {
@@ -64,10 +66,31 @@ const kpiDiario = (kpis: Kpi[], patron: RegExp): number | null =>
 /** Media de las lecturas válidas. null si no hay ninguna. */
 function media(sensores: Sensor[]): number | null {
   // Las lecturas imposibles (CO₂ por debajo del aire exterior) no promedian.
+  // Ni las medidas en revisión (fallos comprobados en la plataforma).
   const v = sensores
-    .filter((s) => s.valor !== null && esCreible(s.tipo, s.valor))
+    .filter((s) => !s.revision && s.valor !== null && esCreible(s.tipo, s.valor))
     .map((s) => s.valor as number)
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null
+}
+
+/**
+ * La cámara de la Puerta 3 se corta durante horas o días (29-10 a 5-11,
+ * y otra vez 31 h el 8-11). Su total entra en el de la puerta principal, que
+ * entonces se queda corto: hay que decirlo en pantalla.
+ * Devuelve desde cuándo no envía, o null si envía con normalidad.
+ */
+function puerta3SinDatos(sensores: Sensor[]): string | null {
+  const medidas = deEquipo(sensores, CAMARA_PUERTA_3)
+  const ts = Math.max(0, ...medidas.map((s) => s.ts ?? 0))
+  if (ts && Date.now() - ts <= CONFIG.minutosSinDatos * 60000) return null
+  if (!ts) return "hoy"
+  const d = new Date(ts)
+  const hoy = new Date().toDateString() === d.toDateString()
+  return (
+    "desde " +
+    (hoy ? "" : d.toLocaleDateString("es-ES", { day: "numeric", month: "numeric" }) + " ") +
+    d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })
+  )
 }
 
 /* ---------- 1. Afluencia ---------- */
@@ -77,8 +100,9 @@ const AFLUENCIA: Diapositiva = {
   titulo: "Afluencia de hoy",
   subtitulo: "Entradas y salidas registradas por los contadores de paso",
   hayDatos: ({ kpis }) => puntosDePaso(kpis).length > 0,
-  contenido: ({ kpis, seriesKpi }) => {
+  contenido: ({ kpis, sensores, seriesKpi }) => {
     const puntos = puntosDePaso(kpis)
+    const p3 = puerta3SinDatos(sensores)
     const transito = puntos.reduce((t, p) => t + (p.entradas ?? 0) + (p.salidas ?? 0), 0)
 
     return (
@@ -89,7 +113,7 @@ const AFLUENCIA: Diapositiva = {
             etiqueta="Puerta principal"
             valor={kpiDiario(kpis, /^ACCESOS_DIARIO_PUERTA_HALL_TOTAL$/)}
             unidad="entradas"
-            detalle="Hall"
+            detalle={p3 ? `Hall · falta la Puerta 3 (sin datos ${p3})` : "Hall"}
           />
           <CifraGrande
             icono={Users}
@@ -321,4 +345,121 @@ const AGUA: Diapositiva = {
   },
 }
 
-export const DIAPOSITIVAS: Diapositiva[] = [AFLUENCIA, CONFORT, AIRE, METEO, AGUA]
+/* ---------- 6. Ventilación de la semana ---------- */
+
+interface ResumenSala {
+  uuid: string
+  sala: string
+  pico: number
+  cuando: number
+  horasMal: number
+}
+
+/**
+ * Pico de CO₂ y horas por encima del umbral de cada sala en los últimos días.
+ * Las horas se miden por tiempo, no por lecturas: cada lectura alta cuenta
+ * hasta la siguiente, con un tope de 30 min para no inflar los huecos.
+ */
+function resumirVentilacion(sensores: Sensor[], semana: Map<string, Punto[]>): ResumenSala[] {
+  return sensores
+    .filter((s) => semana.has(s.uuid))
+    .map((s) => {
+      const serie = (semana.get(s.uuid) ?? []).filter((p) => esCreible(s.tipo, p.value))
+      let pico = 0
+      let cuando = 0
+      let ms = 0
+      serie.forEach((p, i) => {
+        if (p.value > pico) {
+          pico = p.value
+          cuando = p.timestamp
+        }
+        const sig = serie[i + 1]
+        if (sig && p.value > CO2_MAL_VENTILADA) ms += Math.min(sig.timestamp - p.timestamp, 1800000)
+      })
+      return { uuid: s.uuid, sala: s.nombre, pico, cuando, horasMal: ms / 3600000 }
+    })
+    .filter((r) => r.pico > 0)
+    .sort((a, b) => b.pico - a.pico)
+}
+
+const colorCo2 = (v: number) =>
+  v > CO2_MAL_VENTILADA ? "var(--alerta-trazo)" : v > 800 ? "var(--aviso-trazo)" : "var(--ok-trazo)"
+
+const fechaCorta = (ts: number) =>
+  new Date(ts).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "numeric" }) +
+  ", " +
+  new Date(ts).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })
+
+const VENTILACION: Diapositiva = {
+  id: "ventilacion",
+  titulo: "Ventilación esta semana",
+  subtitulo: `CO₂ máximo en cada sala en los últimos ${CONFIG.diasVentilacion} días`,
+  hayDatos: ({ sensores, semanaCo2 }) => resumirVentilacion(sensores, semanaCo2).length > 0,
+  contenido: ({ sensores, semanaCo2 }) => {
+    const salas = resumirVentilacion(sensores, semanaCo2)
+    const peor = salas[0]
+    const horas = salas.reduce((t, r) => t + r.horasMal, 0)
+    const conProblema = salas.filter((r) => r.horasMal > 0).length
+    const tope = Math.max(CO2_MAL_VENTILADA * 1.2, ...salas.map((r) => r.pico))
+
+    return (
+      <>
+        <FilaCifras>
+          <CifraGrande
+            icono={Wind}
+            etiqueta="Pico de la semana"
+            valor={peor?.pico ?? null}
+            unidad="ppm"
+            detalle={peor ? `${peor.sala} · ${fechaCorta(peor.cuando)}` : undefined}
+          />
+          <CifraGrande
+            icono={Clock}
+            etiqueta={`Horas por encima de ${num(CO2_MAL_VENTILADA, 0)} ppm`}
+            valor={horas}
+            unidad="h"
+            decimales={1}
+            detalle={`Sumando las ${salas.length} salas con sonda fiable`}
+          />
+          <CifraGrande
+            icono={TriangleAlert}
+            etiqueta="Salas que lo superaron"
+            valor={conProblema}
+            unidad={`de ${salas.length}`}
+            detalle="Referencia orientativa de aire mal renovado"
+          />
+        </FilaCifras>
+
+        <Bloque titulo={`Máximo de CO₂ por sala · la línea marca ${num(CO2_MAL_VENTILADA, 0)} ppm`}>
+          <div className="flex min-h-0 flex-1 flex-col justify-center gap-[calc(var(--u)*2.2)]">
+            {salas.map((r) => (
+              <div key={r.uuid} className="grid grid-cols-[minmax(0,14em)_1fr_auto] items-center gap-x-[1em] text-[calc(var(--u)*2.4)]">
+                <span className="truncate font-semibold">{r.sala}</span>
+                <div className="relative h-[calc(var(--u)*2)] rounded-full bg-border/60">
+                  <i
+                    className="absolute inset-y-0 left-0 block rounded-full"
+                    style={{ width: `${(r.pico / tope) * 100}%`, background: colorCo2(r.pico) }}
+                  />
+                  <i
+                    className="absolute -inset-y-[0.4em] block w-[2px] bg-foreground/60"
+                    style={{ left: `${(CO2_MAL_VENTILADA / tope) * 100}%` }}
+                    aria-hidden="true"
+                  />
+                </div>
+                <span className="cifras min-w-[8em] text-right font-bold tabular-nums">
+                  {num(r.pico, 0)} <span className="text-[0.7em] font-medium text-muted-foreground">ppm</span>
+                  {r.horasMal > 0 && (
+                    <span className="ml-[0.6em] text-[0.75em] font-semibold text-[var(--alerta-trazo)]">
+                      {num(r.horasMal, 1)} h
+                    </span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Bloque>
+      </>
+    )
+  },
+}
+
+export const DIAPOSITIVAS: Diapositiva[] = [AFLUENCIA, CONFORT, AIRE, VENTILACION, METEO, AGUA]

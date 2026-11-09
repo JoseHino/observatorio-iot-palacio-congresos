@@ -30,8 +30,10 @@ export function PanelResumen({ sensores }: { sensores: Sensor[] }) {
     (s) => !s.ts || Date.now() - s.ts <= CONFIG.minutosSinDatos * 60000,
   )
   const optimos = sensores.filter((s) => s.estado.clase === "ok").length
+  // Lo que está fuera de rango y lo que está en revisión (fallo comprobado
+  // en la plataforma) requiere atención por igual.
   const avisos = sensores.filter(
-    (s) => s.estado.clase !== "ok" && s.estado.clase !== "neutro",
+    (s) => s.revision || (s.estado.clase !== "ok" && s.estado.clase !== "neutro"),
   ).length
   const ultima = Math.max(0, ...sensores.map((s) => s.ts ?? 0))
 

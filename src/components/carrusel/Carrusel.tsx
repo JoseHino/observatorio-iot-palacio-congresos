@@ -13,10 +13,10 @@ interface Props extends DatosDiapositiva {
   inicioCiclo: number
 }
 
-export function Carrusel({ sensores, kpis, seriesKpi, conexion, ahora, inicioCiclo }: Props) {
+export function Carrusel({ sensores, kpis, seriesKpi, semanaCo2, conexion, ahora, inicioCiclo }: Props) {
   const datos: DatosDiapositiva = useMemo(
-    () => ({ sensores, kpis, seriesKpi }),
-    [sensores, kpis, seriesKpi],
+    () => ({ sensores, kpis, seriesKpi, semanaCo2 }),
+    [sensores, kpis, seriesKpi, semanaCo2],
   )
 
   // Una diapositiva sin datos no se enseña vacía: se salta. Así la pantalla

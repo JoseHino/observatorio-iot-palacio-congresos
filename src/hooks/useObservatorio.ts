@@ -8,7 +8,7 @@ import {
   leerKpis,
   leerSensores,
 } from "@/lib/api"
-import { CONFIG, GRUPOS } from "@/lib/config"
+import { CONFIG, EN_REVISION, GRUPOS } from "@/lib/config"
 import { clasificar, evaluar } from "@/lib/formato"
 import type { EstadoConexion, Kpi, Punto, Sensor } from "@/lib/tipos"
 
@@ -21,6 +21,8 @@ interface Observatorio {
   /** Series de varios días de los KPI destacados (afluencia y agua). */
   seriesKpi: Map<PapelSerie, Punto[]>
   historicos: Map<string, Punto[]>
+  /** CO₂ de los últimos días de cada sonda interior fiable, por uuid. */
+  semanaCo2: Map<string, Punto[]>
   conexion: EstadoConexion
   aviso: string
   /** Marca de tiempo del último ciclo completado, para la barra de refresco. */
@@ -79,6 +81,9 @@ export function useObservatorio(): Observatorio {
   const [kpis, setKpis] = useState<Kpi[]>([])
   const [seriesKpi, setSeriesKpi] = useState<Map<PapelSerie, Punto[]>>(new Map())
   const [historicos, setHistoricos] = useState<Map<string, Punto[]>>(new Map())
+  const [semanaCo2, setSemanaCo2] = useState<Map<string, Punto[]>>(new Map())
+  // Las series de una semana pesan: se piden cada media hora, no cada minuto.
+  const ultimaSemana = useRef(0)
   const [conexion, setConexion] = useState<EstadoConexion>("cargando")
   const [aviso, setAviso] = useState("")
   const [inicioCiclo, setInicioCiclo] = useState(() => Date.now())
@@ -98,6 +103,15 @@ export function useObservatorio(): Observatorio {
       const clasificados: Sensor[] = brutos
         .map((s) => {
           const tipo = clasificar(s.codigo, s.nombre, s.unidad)
+          const r = EN_REVISION[s.equipo.toUpperCase()]
+          if (r && (!r.codigos || r.codigos.test(s.codigo))) {
+            return {
+              ...s,
+              tipo,
+              revision: r.motivo,
+              estado: { clase: "neutro" as const, color: "var(--neutro)", etiqueta: "En revisión" },
+            }
+          }
           return { ...s, tipo, estado: evaluar(tipo, s.valor, s.exterior) }
         })
         // Ordenar por grupo es lo que hace eficiente la paginación: la
@@ -150,6 +164,21 @@ export function useObservatorio(): Observatorio {
           }
         }),
       ).then((series) => setSeriesKpi(new Map(series)))
+
+      if (hasta - ultimaSemana.current > CONFIG.minutosSemana * 60000) {
+        ultimaSemana.current = hasta
+        const sondas = clasificados.filter(
+          (s) => s.tipo.id === "co2" && s.zona && !s.exterior && !s.revision && !s.matiz,
+        )
+        const desdeSemana = hasta - CONFIG.diasVentilacion * 86400000
+        void enTanda(sondas, async (s) => {
+          try {
+            return [s.uuid, await leerHistorico(s, desdeSemana, hasta, modoDemo.current)] as const
+          } catch {
+            return [s.uuid, [] as Punto[]] as const
+          }
+        }).then((series) => setSemanaCo2(new Map(series)))
+      }
     } catch (e) {
       const mensaje = e instanceof Error ? e.message : String(e)
       console.error("[observatorio]", e)
@@ -194,6 +223,7 @@ export function useObservatorio(): Observatorio {
     kpis,
     seriesKpi,
     historicos,
+    semanaCo2,
     conexion,
     aviso,
     inicioCiclo,
