@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 
+import { BotonPlano } from "@/components/BotonPlano"
 import { DIAPOSITIVAS, type DatosDiapositiva } from "@/components/carrusel/diapositivas"
 import { useRotacion } from "@/hooks/usePantalla"
 import { CONFIG } from "@/lib/config"
@@ -86,6 +87,7 @@ export function Carrusel({ sensores, kpis, seriesKpi, semanaCo2, conexion, ahora
           Diapositiva {(indice % visibles.length) + 1} de {visibles.length}
         </span>
         <span className="flex-1" />
+        <BotonPlano />
         <span>
           {conexion === "demo"
             ? "DATOS SIMULADOS · sin conexión con la plataforma"

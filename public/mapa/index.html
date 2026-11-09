@@ -48,6 +48,7 @@ input[type=search]{width:100%;padding:7px 10px;border:1px solid var(--borde);bor
 .aviso{left:12px;top:12px;border-left:4px solid var(--aviso);padding:8px 12px;max-width:430px}
 .etiq{position:absolute;pointer-events:none;font-size:11.5px;font-weight:600;color:var(--texto);background:color-mix(in srgb,var(--panel) 85%,transparent);padding:1px 6px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-50%)}
 .etiq.norte{color:var(--mal);font-size:14px}
+.etiq.cod{font-size:10.5px;padding:0 4px;color:var(--suave)}
 .ficha{padding:16px;overflow:auto;flex:1}
 .ficha h2{margin:0 0 2px;font-size:17px}
 .estado{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;color:#fff;margin:6px 0}
@@ -75,24 +76,24 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   <aside>
     <header>
       <h1>Sensores del Palacio de Congresos</h1>
-      <div class="sub">43 equipos · plataforma Nealis Tech (IoTsens) · edificio según el Catastro</div>
+      <div class="sub">43 sensores y 4 equipos de comunicaciones · plataforma IoTsens · planos de instalación de Nealis sobre el edificio del Catastro</div>
       <div class="vivo" id="vivo"><i></i><span>Conectando con la plataforma…</span></div>
     </header>
     <div class="filtros">
-      <input type="search" id="buscar" placeholder="Buscar por nombre, sala o número de serie">
+      <input type="search" id="buscar" placeholder="Buscar por nombre, sala, código (C3, P7…) o número de serie">
       <div class="fila" id="fTipo"></div>
       <div class="fila" id="fEstado"></div>
     </div>
     <div class="lista" id="lista"></div>
   </aside>
   <main id="escena">
-    <div class="capa aviso"><b>Posiciones aproximadas.</b> La plataforma no tiene colocado ningún sensor en los planos: cada uno se dibuja dentro de su sala, no en su punto exacto.</div>
+    <div class="capa aviso"><b>Cada sensor en su punto.</b> Posiciones de los planos de instalación de Nealis (26-06-2026). Los marcados con anillo blanco (azotea, contador de agua y sonómetro exterior) son aproximados: Nealis solo los sitúa sobre una foto aérea.</div>
     <div class="capa plantas" id="fPlanta"></div>
     <div class="capa leyenda" id="leyenda"></div>
   </main>
   <aside class="der">
     <div class="ficha" id="ficha"></div>
-    <div class="pie">Edificio: Catastro, parcela 9623103UF2492S (9 cuerpos, alturas por número de plantas). Unidades añadidas por AMMA: la plataforma no publica ninguna. Mínimo y máximo: del 27-10 al 3-11-2026. Estado de cada sensor revisado el 9-11-2026. <a href="../">Volver a la pantalla</a></div>
+    <div class="pie">Edificio: Catastro, parcela 9623103UF2492S (9 cuerpos, alturas por número de plantas). Planos y posiciones: documentación de instalación de Nealis (26-06-2026), ajustados al Catastro por AMMA con un error de unos 0,2 m en las esquinas. Unidades añadidas por AMMA: la plataforma no publica ninguna. Mínimo y máximo: del 27-10 al 3-11-2026. Estado de cada sensor revisado el 9-11-2026. <a href="../">Volver a la pantalla</a></div>
   </aside>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -103,9 +104,19 @@ const EDIFICIO = {"ancho_m":119.3,"fondo_m":77,"partes":[{"sobre":2,"bajo":0,"an
 const ZONAS = {"Sótano":[{"clave":"Sótano","nombre":"Sótano","x0":2,"x1":18,"y0":-20,"y1":-6,"color":"#0f8aa8"}],"Planta Baja":[{"clave":"Anfiteatro","nombre":"Anfiteatros A, B y C","x0":-20,"x1":3,"y0":-28,"y1":28,"color":"#1044CD"},{"clave":"Hall Principal","nombre":"Hall Principal","x0":6,"x1":20,"y0":-28,"y1":28,"color":"#0f8aa8"},{"clave":"Pre-Hall","nombre":"Pre-Hall (entrada)","x0":29,"x1":45,"y0":-30,"y1":8,"color":"#7c5cd6"},{"clave":"Oficinas","nombre":"Oficinas","x0":-57,"x1":-39,"y0":-8,"y1":12,"color":"#d98a00"},{"clave":"Puertas emergencia","nombre":"Puertas de emergencia","x0":3,"x1":19,"y0":-38,"y1":-33,"color":"#d64545","fijos":{"24E124136B503963":[16,-36],"24E124757E150064":[11,-36],"24E124136B504850":[6,-36],"24E124136B503964":[16,34],"24E124136B504915":[46,-22]}}],"Planta 1":[{"clave":"Sala Exposiciones","nombre":"Sala de Exposiciones","x0":-21,"x1":19,"y0":-32,"y1":32,"color":"#1044CD"},{"clave":"Entrada Exposiciones","nombre":"Entrada a Exposiciones y terraza","x0":-34,"x1":-25,"y0":-30,"y1":34,"color":"#7c5cd6"},{"clave":"Sala Azul","nombre":"Sala Azul y escaleras","x0":29,"x1":39,"y0":-10,"y1":11,"color":"#0f8aa8"}],"Azotea":[{"clave":"Azotea","nombre":"Azotea","x0":-20,"x1":19,"y0":-30,"y1":30,"color":"#1f9d6b","techo":2,"fijos":{"WEATHER_STATION":[-4,24],"0004A30B017559CE":[6,24],"0004A30B01757A3A":[0,-24]}}]};
 const VIVO = {"proxy":"https://iotsens-palacio-congresos.josemariahf612.workers.dev","tenant":"d494ce35-8330-4b4f-b91c-b520544ca72e","org":"d127fa54-70db-4556-9c39-c600d26c956e","device":"e89145a0-ba40-4a65-96ae-bd1d12119062"};
 
+const POS = {"equipos":{"8C83FC05008528B4":{"pos":[39.12,11.2],"codigo":"V1","aprox":true,"eui":"8C83FC05008528B4","nserie":"8C83FC05008528B4","modelo":"Axioma Qalcosonic W1 (DN25)","donde":"Sótano, en la entrada de agua antes de los depósitos de acumulación."},"24E124725F206227":{"pos":[34.76,8.5],"codigo":"C1","aprox":false,"eui":"24E124725F206227","nserie":"24E124725F206227","modelo":"Milesight AM103L","donde":"Oficinas."},"24E124757E155727":{"pos":[33.19,-4.18],"codigo":"C1","aprox":false,"eui":"24E124757E155727","nserie":"24E124757E155727","modelo":"Milesight VS132","donde":"Sobre la puerta corredera derecha de acceso al Pre-Hall desde la calle."},"24E124757E150064":{"pos":[13.13,-34.51],"codigo":"C10","aprox":false,"eui":"24E124757E150064","nserie":"6757E15006410005","modelo":"Milesight VS132","donde":"Puerta de emergencia lateral Sur-Este (servicios)."},"24E124725F202145":{"pos":[31.43,3.22],"codigo":"C2","aprox":false,"eui":"24E124725F202145","nserie":"24E124725F202145","modelo":"Milesight AM103L","donde":"Pre-Hall, en la pared de acceso a oficinas."},"24E124757E155751":{"pos":[33.55,-0.63],"codigo":"C2","aprox":false,"eui":"24E124757E155751","nserie":"24E124757E155751","modelo":"Milesight VS132","donde":"Sobre la puerta corredera izquierda de acceso al Pre-Hall desde la calle."},"24E124725F201363":{"pos":[8.18,-1.55],"codigo":"C3","aprox":false,"eui":"24E124725F201363","nserie":"24E124725F201363","modelo":"Milesight AM103L","donde":"Hall Principal, en el centro, entre las puertas del Anfiteatro B."},"24E124725F202340":{"pos":[-4.02,-18.75],"codigo":"C4","aprox":false,"eui":"24E124725F202340","nserie":"24E124725F202340","modelo":"Milesight AM103L","donde":"Dentro del Anfiteatro A."},"24E124725F204791":{"pos":[-2.93,-2.17],"codigo":"C5","aprox":false,"eui":"24E124725F204791","nserie":"24E124725F204791","modelo":"Milesight AM103L","donde":"Dentro del Anfiteatro B."},"24E124725F200956":{"pos":[-1.99,17.98],"codigo":"C6","aprox":false,"eui":"24E124725F200956","nserie":"24E124725F200956","modelo":"Milesight AM103L","donde":"Dentro del Anfiteatro C."},"24E124757E030030":{"pos":[12.84,-3.14],"codigo":"C8","aprox":false,"eui":"24E124757E030030","nserie":"6757E03003050005","modelo":"Milesight VS132","donde":"Puerta corredera de entrada al Hall Principal (puerta 2)."},"24E124757E151915":{"pos":[13.01,0.42],"codigo":"C9","aprox":false,"eui":"24E124757E151915","nserie":"6757E15191580000","modelo":"Milesight VS132","donde":"Puerta corredera de entrada al Hall Principal (puerta 3)."},"24E124136B503964":{"pos":[15.6,33.65],"codigo":"P10","aprox":false,"eui":"24E124136B503964","nserie":"24E124136B503964","modelo":"Milesight EM300-MCS","donde":"Puerta de emergencia lateral Norte-Este."},"24E124136B504880":{"pos":[35.65,-6.46],"codigo":"P3","aprox":false,"eui":"24E124136B504880","nserie":"24E124136B504880","modelo":"Milesight EM300-MCS","donde":"Pre-Hall, puerta lateral de emergencia (izquierda, vista desde dentro)."},"24E124136B504893":{"pos":[36.0,1.04],"codigo":"P4","aprox":false,"eui":"24E124136B504893","nserie":"24E124136B504893","modelo":"Milesight EM300-MCS","donde":"Pre-Hall, puerta lateral de emergencia (derecha, vista desde dentro)."},"24E124136B504915":{"pos":[24.65,6.15],"codigo":"P5","aprox":false,"eui":"24E124136B504915","nserie":"24E124136B504915","modelo":"Milesight EM300-MCS","donde":"Puerta lateral del Pre-Hall, junto a las oficinas."},"24E124136B503963":{"pos":[11.05,-37.53],"codigo":"P8","aprox":false,"eui":"24E124136B503963","nserie":"24E124136B503963","modelo":"Milesight EM300-MCS","donde":"Puerta de emergencia lateral Sur-Este (servicios)."},"24E124136B504850":{"pos":[15.23,-37.74],"codigo":"P9","aprox":false,"eui":"24E124136B504850","nserie":"24E124136B504850","modelo":"Milesight EM300-MCS","donde":"Puerta de emergencia lateral Sur-Este (servicios)."},"24E124743C409849":{"pos":[27.62,3.34],"codigo":"S1","aprox":false,"eui":"24E124743C409849","nserie":"24E124743C409849","modelo":"Milesight WS302","donde":"Pre-Hall, en la pared de acceso a oficinas."},"0004A30B01757485":{"pos":[3.0,-24.52],"codigo":"S2","aprox":false,"eui":"0004A30B01757485","nserie":"0004A30B01757485","modelo":"IoTSens Sound Level Monitor","donde":"Extremo Sur del Hall Principal."},"0004A30B0175793C":{"pos":[5.24,23.46],"codigo":"S3","aprox":false,"eui":"0004A30B0175793C","nserie":"0004A30B0175793C","modelo":"IoTSens Sound Level Monitor","donde":"Extremo Norte del Hall Principal."},"24E124743C407378":{"pos":[-8.65,-18.6],"codigo":"S4","aprox":false,"eui":"24E124743C407378","nserie":"24E124743C407378","modelo":"Milesight WS302","donde":"Dentro del Anfiteatro A."},"24E124743C404511":{"pos":[-2.9,1.99],"codigo":"S5","aprox":false,"eui":"24E124743C404511","nserie":"24E124743C404511","modelo":"Milesight WS302","donde":"Dentro del Anfiteatro B."},"24E124743C404424":{"pos":[-6.4,18.12],"codigo":"S6","aprox":false,"eui":"24E124743C404424","nserie":"24E124743C404424","modelo":"Milesight WS302","donde":"Dentro del Anfiteatro C."},"24E124614C476665":{"pos":[17.48,-23.11],"codigo":"A5","aprox":false,"eui":"24E124614C476665","nserie":"6614C47666520003","modelo":"Milesight VS132","donde":"Escalera de acceso a la Sala Azul (Sur 2)."},"24E124614C471012":{"pos":[19.73,21.25],"codigo":"A6","aprox":false,"eui":"24E124614C471012","nserie":"6614C47101260003","modelo":"Milesight VS132","donde":"Escalera de acceso a la Sala Azul (Norte 1)."},"24E124757E030016":{"pos":[-41.19,4.97],"codigo":"C3","aprox":false,"eui":"24E124757E030016","nserie":"6757E03001640003","modelo":"Milesight VS132","donde":"Puerta de entrada de público a Exposiciones."},"24E124757D364092":{"pos":[17.31,-26.8],"codigo":"C4","aprox":false,"eui":"24E124757D364092","nserie":"24E124757D364092","modelo":"Milesight VS132","donde":"Escalera de acceso a la Sala Azul (Sur 1)."},"24E124725F204511":{"pos":[30.11,-1.11],"codigo":"C7","aprox":false,"eui":"24E124725F204511","nserie":"24E124725F204511","modelo":"Milesight AM103L","donde":"Dentro de la Sala Azul."},"24E124757E151912":{"pos":[19.9,24.94],"codigo":"C7","aprox":false,"eui":"24E124757E151912","nserie":"6757E15191290001","modelo":"Milesight VS132","donde":"Escalera de acceso a la Sala Azul (Norte 2)."},"24E124725F204685":{"pos":[14.03,14.32],"codigo":"C8","aprox":false,"eui":"24E124725F204685","nserie":"24E124725F204685","modelo":"Milesight AM103L","donde":"Pared Este de la Sala de Exposiciones, junto al gateway."},"24E124725F202568":{"pos":[-28.01,-12.34],"codigo":"C9","aprox":false,"eui":"24E124725F202568","nserie":"24E124725F202568","modelo":"Milesight AM103L","donde":"Pared Oeste de la Sala de Exposiciones."},"24E124136B503960":{"pos":[-42.64,8.75],"codigo":"P1","aprox":false,"eui":"24E124136B503960","nserie":"24E124136B503960","modelo":"Milesight EM300-MCS","donde":"Puerta de entrada de público a Exposiciones."},"24E124136B504909":{"pos":[-39.41,8.58],"codigo":"P2","aprox":false,"eui":"24E124136B504909","nserie":"24E124136B504909","modelo":"Milesight EM300-MCS","donde":"Puerta de entrada de público a Exposiciones."},"24E124136B504869":{"pos":[-40.64,-5.5],"codigo":"P6","aprox":false,"eui":"24E124136B504869","nserie":"24E124136B504869","modelo":"Milesight EM300-MCS","donde":"Puerta de acceso a la terraza de Exposiciones (desencajada, según Nealis)."},"24E124136B504870":{"pos":[-36.31,-5.72],"codigo":"P7","aprox":false,"eui":"24E124136B504870","nserie":"24E124136B504870","modelo":"Milesight EM300-MCS","donde":"Puerta de acceso a la terraza de Exposiciones (desencajada, según Nealis)."},"0004A30B01755C3B":{"pos":[19.17,-3.13],"codigo":"S7","aprox":false,"eui":"0004A30B01755C3B","nserie":"0004A30B01755C3B","modelo":"IoTSens Sound Level Monitor","donde":"Pasillo frente a la Sala Azul."},"0004A30B0175708A":{"pos":[13.81,9.71],"codigo":"S8","aprox":false,"eui":"0004A30B0175708A","nserie":"0004A30B0175708A","modelo":"IoTSens Sound Level Monitor","donde":"Pared Este de la Sala de Exposiciones, junto al gateway."},"0004A30B01756006":{"pos":[-27.81,-8.04],"codigo":"S9","aprox":false,"eui":"0004A30B01756006","nserie":"0004A30B01756006","modelo":"IoTSens Sound Level Monitor","donde":"Pared Oeste de la Sala de Exposiciones."},"0004A30B004F7A5D":{"pos":[-51.09,1.96],"codigo":"SE2","aprox":true,"eui":"0004A30B004F7A5D","nserie":"0004A30B004F7A5D","modelo":"IoTSens Sound Level Monitor","donde":"Exterior de la puerta de acceso del público a Exposiciones."},"0004A30B017559CE":{"pos":[34.5,13.5],"codigo":"CA1","aprox":true,"eui":"0004A30B017559CE","nserie":"0004A30B017559CE","modelo":"IoTSens Air Quality Monitor","donde":"Terrado sobre las oficinas.","techo":1},"WEATHER_STATION":{"pos":[31.5,13.5],"codigo":"E1","aprox":true,"eui":"24E124445C066223_0024_FF","nserie":"WEATHER_STATION","modelo":"Sentec SEM5093 + Milesight UC300","donde":"Terrado sobre las oficinas, en un mástil.","techo":1},"0004A30B01757A3A":{"pos":[42.98,11.54],"codigo":"SE1","aprox":true,"eui":"0004A30B01757A3A","nserie":"0004A30B01757A3A","modelo":"IoTSens Sound Level Monitor","donde":"Terrado sobre las oficinas.","techo":1}},"infra":[{"alias":"Nodo IoT + rack","eui":"F55793BDF93E9E21","planta":"Planta Baja","pos":[32.21,11.8],"donde":"Oficinas, cuarto de comunicaciones. Recibe los datos de los gateways y los envía a la plataforma por 4G.","aprox":false},{"alias":"Gateway interior 1","eui":"","planta":"Planta Baja","pos":[33.14,14.08],"donde":"Oficinas, cuarto de comunicaciones. Recibe por radio (LoRaWAN) los datos de los sensores.","aprox":false},{"alias":"Gateway interior 2","eui":"","planta":"Planta 1","pos":[10.08,11.86],"donde":"Pared Este de la Sala de Exposiciones. Recibe por radio (LoRaWAN) los datos de los sensores de la planta alta.","aprox":false},{"alias":"Gateway exterior","eui":"","planta":"Azotea","pos":[33,15.5],"donde":"Terrado sobre las oficinas, en un mástil. Recibe por radio (LoRaWAN) los datos de los equipos de exterior.","aprox":true,"techo":1}],"planos":{"pb":{"img":"planta_baja.png","c":[[-59.86,-37.41],[-55.86,48.29],[64.58,42.21],[60.58,-43.49]]},"p1":{"img":"planta_1.png","c":[[-63.07,-38.67],[-58.96,49.57],[63.13,43.41],[59.01,-44.83]]}}};
+// Posición exacta (planos de instalación de Nealis) y datos de ficha de cada equipo
+SENSORES.forEach(s => Object.assign(s, POS.equipos[s.serie] || {}));
+// Equipos de comunicaciones: no miden, pero son los que llevan los datos a la plataforma
+POS.infra.forEach((g, i) => SENSORES.push({serie: g.eui || "GW" + i, alias: g.alias, tipo: "Comunicaciones",
+  categoria: g.eui ? "IoT Node" : "Gateway LoRaWAN", planta: g.planta, zona: g.planta === "Azotea" ? "Azotea" : (g.donde.split(",")[0]),
+  ultimo: "—", frecuencia: "—", estado: "infra", nota: "", lecturas: [], pos: g.pos, techo: g.techo, donde: g.donde,
+  aprox: g.aprox, eui: g.eui || "—", nserie: "—", modelo: g.eui ? "Nodo IoT con salida 4G" : "Gateway LoRaWAN", codigo: g.eui ? "Nodo" : "GW"}));
+
 const ESTADOS = {
   ok:{t:"Funciona bien", c:"--ok"}, aviso:{t:"Con incidencia", c:"--aviso"},
-  dudoso:{t:"Dudoso", c:"--dudoso"}, mal:{t:"Datos erróneos", c:"--mal"}, off:{t:"Sin señal", c:"--off"}
+  dudoso:{t:"Dudoso", c:"--dudoso"}, mal:{t:"Datos erróneos", c:"--mal"}, off:{t:"Sin señal", c:"--off"},
+  infra:{t:"Comunicaciones", c:"--azul"}
 };
 const PLANTAS = ["Azotea","Planta 1","Planta Baja","Sótano"];
 const NIVEL = {"Sótano":-1,"Planta Baja":0,"Planta 1":1,"Azotea":2};
@@ -118,7 +129,8 @@ const QUE_MIDE = {
   "Sonómetro":"Mide el nivel de ruido en decibelios.",
   "Calidad del aire":"Mide gases contaminantes y partículas en el aire exterior.",
   "Estación meteorológica":"Mide temperatura, humedad, viento, lluvia, sol y presión.",
-  "Contador de agua":"Mide los litros de agua que consume el edificio."
+  "Contador de agua":"Mide los litros de agua que consume el edificio.",
+  "Comunicaciones":"No mide: recibe los datos de los sensores y los lleva a la plataforma."
 };
 const TIPOS = [...new Set(SENSORES.map(s => s.tipo))];
 
@@ -153,7 +165,7 @@ const visible = s =>
   (!filtro.tipo.size || filtro.tipo.has(s.tipo)) &&
   (!filtro.estado.size || filtro.estado.has(s.estado)) &&
   (filtro.planta==="Todas" || s.planta===filtro.planta) &&
-  (!filtro.texto || (s.alias+" "+s.zona+" "+s.serie+" "+s.planta).toLowerCase().includes(filtro.texto));
+  (!filtro.texto || (s.alias+" "+s.zona+" "+s.serie+" "+s.planta+" "+(s.codigo||"")+" "+(s.nserie||"")).toLowerCase().includes(filtro.texto));
 
 function pintarLista(){
   const el = document.getElementById("lista"); el.innerHTML = "";
@@ -163,20 +175,21 @@ function pintarLista(){
     el.insertAdjacentHTML("beforeend", `<div class="grupo">${p} · ${de.length}</div>`);
     de.sort((a,b) => a.zona.localeCompare(b.zona) || a.alias.localeCompare(b.alias)).forEach(s => {
       const d = document.createElement("div"); d.className = "item" + (s===seleccionado?" sel":"");
-      d.innerHTML = `<i class="punto" style="background:${css(ESTADOS[s.estado].c)}"></i><div><b>${s.alias}</b><small>${s.tipo} · ${s.zona}</small></div>`;
+      d.innerHTML = `<i class="punto" style="background:${css(ESTADOS[s.estado].c)}"></i><div><b>${s.alias}</b><small>${s.codigo ? s.codigo+' · ' : ''}${s.tipo} · ${s.zona}</small></div>`;
       d.onclick = () => elegir(s, true); el.appendChild(d);
     });
   });
 }
 
 /* ---------- ficha ---------- */
+const rumbo = ([e, n]) => `${Math.abs(n).toLocaleString("es-ES",{maximumFractionDigits:1})} m al ${n>=0?"Norte":"Sur"} y ${Math.abs(e).toLocaleString("es-ES",{maximumFractionDigits:1})} m al ${e>=0?"Este":"Oeste"}`;
 const fmt = v => typeof v === "number" ? v.toLocaleString("es-ES",{maximumFractionDigits:2}) : (v ?? "—");
 function ficha(){
   const el = document.getElementById("ficha");
   if (!seleccionado){
     const n = k => SENSORES.filter(s=>s.estado===k).length;
-    el.innerHTML = `<h2>Resumen</h2><div class="sub">Pulsa un sensor en el edificio o en la lista para ver su ficha. Arrastra para girar; rueda para acercar.</div>
-      <div class="resumen"><div><b>${SENSORES.length}</b>sensores</div><div><b style="color:${css("--ok")}">${n("ok")}</b>funcionan bien</div>
+    el.innerHTML = `<h2>Resumen</h2><div class="sub">Pulsa un sensor en el edificio o en la lista para ver su ficha. Arrastra para girar; rueda para acercar. Cada punto lleva su código del plano de instalación.</div>
+      <div class="resumen"><div><b>${SENSORES.length - n("infra")}</b>sensores</div><div><b style="color:${css("--ok")}">${n("ok")}</b>funcionan bien</div>
       <div><b style="color:${css("--mal")}">${n("mal")+n("off")}</b>sin señal o con datos erróneos</div><div><b style="color:${css("--aviso")}">${n("aviso")+n("dudoso")}</b>con incidencia o dudosos</div></div>
       <table><tr><th>Tipo</th><th class="n">Nº</th></tr>${TIPOS.map(t=>`<tr><td>${t}<br><small style="color:var(--suave)">${QUE_MIDE[t]||""}</small></td><td class="n">${SENSORES.filter(s=>s.tipo===t).length}</td></tr>`).join("")}</table>`;
     return;
@@ -186,10 +199,17 @@ function ficha(){
     <span class="estado" style="background:${css(e.c)}">${e.t}</span>
     ${s.nota ? `<div class="nota" style="border-color:${css(e.c)}">${s.nota}</div>` : ""}
     <div class="meta"><div>Qué mide</div><div>${QUE_MIDE[s.tipo]||""}</div>
-      <div>Envía datos</div><div>${s.frecuencia}</div><div>Último dato</div><div>${s.ultimo}</div>
-      <div>Nº de serie</div><div>${s.serie}</div><div>Categoría</div><div>${s.categoria}</div></div>
-    <table><tr><th>Medida</th><th class="n">Última</th><th class="n">Mín.</th><th class="n">Máx.</th></tr>
-    ${s.lecturas.map(l=>`<tr><td>${l.n}</td><td class="n">${fmt(l.v)} ${l.u}</td><td class="n">${fmt(l.min)}</td><td class="n">${fmt(l.max)}</td></tr>`).join("")}</table>`;
+      <div>Dónde está</div><div>${s.donde||s.zona}</div>
+      <div>Código en plano</div><div><b>${s.codigo||"—"}</b></div>
+      <div>Posición</div><div>${s.pos ? `${s.aprox ? "Aproximada" : "Exacta (plano de Nealis)"} · ${rumbo(s.pos)} del centro del edificio` : "—"}</div>
+      <div>Planta</div><div>${s.planta}</div>
+      <div>Modelo</div><div>${s.modelo||"—"}</div>
+      <div>Categoría</div><div>${s.categoria}</div>
+      <div>EUI (radio)</div><div>${s.eui||s.serie}</div>
+      <div>Nº de serie</div><div>${s.nserie||"—"}</div>
+      <div>Envía datos</div><div>${s.frecuencia}</div><div>Último dato</div><div>${s.ultimo}</div></div>
+    ${s.lecturas.length ? "" : "<!--"}<table><tr><th>Medida</th><th class="n">Última</th><th class="n">Mín.</th><th class="n">Máx.</th></tr>
+    ${s.lecturas.map(l=>`<tr><td>${l.n}</td><td class="n">${fmt(l.v)} ${l.u}</td><td class="n">${fmt(l.min)}</td><td class="n">${fmt(l.max)}</td></tr>`).join("")}</table>${s.lecturas.length ? "" : "-->"}`;
 }
 function elegir(s, desdeLista){
   seleccionado = (seleccionado===s && !desdeLista) ? null : s;
@@ -242,43 +262,37 @@ EDIFICIO.partes.forEach(p => p.anillos.forEach(a => {
   cub.userData.cubiertaDe = p.sobre;
 }));
 
-// zonas (rectángulos en metros) y sensores
-const etiquetas = [], marcadores = [], cajasZona = [];
-const yPlanta = (p, z) => p==="Azotea" ? (z?.techo ?? 2)*H + 0.3 : NIVEL[p]*H + 0.35;
-PLANTAS.forEach(p => (ZONAS[p]||[]).forEach(z => {
-  const w = z.x1-z.x0, d = z.y1-z.y0, y = yPlanta(p, z);
-  const g = new THREE.BoxGeometry(w, 2.4, d);
-  const col = new THREE.Color(z.color);
-  const caja = new THREE.Mesh(g, new THREE.MeshLambertMaterial({color:col, transparent:true, opacity:0.16, depthWrite:false}));
-  caja.position.set((z.x0+z.x1)/2, y+1.2, -(z.y0+z.y1)/2); scene.add(caja);
-  const b = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({color:col}));
-  b.position.copy(caja.position); scene.add(b);
-  cajasZona.push({p, objs:[caja,b]});
-  const et = document.createElement("div"); et.className = "etiq"; et.textContent = z.nombre; cont.appendChild(et);
-  etiquetas.push({el:et, p, pos:caja.position.clone().add(new THREE.Vector3(0,2.2,0))});
-}));
-const geo = new THREE.SphereGeometry(1.15, 20, 14);
-PLANTAS.forEach(p => {
-  const porZona = {};
-  SENSORES.filter(s=>s.planta===p).forEach(s => (porZona[s.zona] ??= []).push(s));
-  Object.entries(porZona).forEach(([zona, lista]) => {
-    const z = (ZONAS[p]||[]).find(z=>z.clave===zona);
-    const libres = lista.filter(s => !z?.fijos?.[s.serie]);
-    const w = z.x1-z.x0, d = z.y1-z.y0;
-    const cols = Math.max(1, Math.round(Math.sqrt(libres.length*w/d))), filas = Math.ceil(libres.length/cols);
-    lista.forEach(s => {
-      let x, y;
-      const fijo = z?.fijos?.[s.serie];
-      if (fijo){ [x,y] = fijo; }
-      else { const i = libres.indexOf(s), c = i%cols, f = Math.floor(i/cols);
-        x = z.x0 + w*(c+0.5)/cols; y = z.y1 - d*(f+0.5)/filas; }
-      const base = yPlanta(p, z);
-      const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color:new THREE.Color(css(ESTADOS[s.estado].c))}));
-      m.position.set(x, base+3.1, -y); m.userData.s = s; scene.add(m); marcadores.push(m);
-      const palo = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,3,6), new THREE.MeshBasicMaterial({color:0x7d8796}));
-      palo.position.set(x, base+1.5, -y); scene.add(palo); m.userData.palo = palo;
-    });
-  });
+// Planos de instalación de Nealis como suelo de cada planta (fondo transparente)
+const cargador = new THREE.TextureLoader();
+[["pb","Planta Baja",0],["p1","Planta 1",1]].forEach(([k, planta, nivel]) => {
+  const pl = POS.planos[k], y = nivel*H + 0.38;
+  const g = new THREE.BufferGeometry();
+  const v = pl.c.map(([e,n]) => [e, y, -n]);
+  g.setAttribute("position", new THREE.Float32BufferAttribute([...v[0],...v[1],...v[2], ...v[0],...v[2],...v[3]], 3));
+  g.setAttribute("uv", new THREE.Float32BufferAttribute([0,1, 1,1, 1,0, 0,1, 1,0, 0,0], 2));
+  const tex = cargador.load(pl.img, () => renderer.render(scene, camara));
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({map:tex, transparent:true, side:THREE.DoubleSide, depthWrite:false}));
+  m.renderOrder = 1; scene.add(m); losas[planta].push(m);
+});
+
+const etiquetas = [], marcadores = [];
+const geo = new THREE.SphereGeometry(0.75, 20, 14);
+const geoCubo = new THREE.BoxGeometry(1.1, 1.1, 1.1);
+const geoAnillo = new THREE.TorusGeometry(1.15, 0.12, 8, 28);
+SENSORES.forEach(s => {
+  const [x, y] = s.pos;
+  const base = s.planta==="Azotea" ? (s.techo ?? 1)*H + 0.3 : NIVEL[s.planta]*H + 0.38;
+  const m = new THREE.Mesh(s.estado==="infra" ? geoCubo : geo, new THREE.MeshLambertMaterial({color:new THREE.Color(css(ESTADOS[s.estado].c))}));
+  m.position.set(x, base+2.2, -y); m.userData.s = s; m.renderOrder = 2; scene.add(m); marcadores.push(m);
+  const palo = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,2.2,6), new THREE.MeshBasicMaterial({color:0x7d8796}));
+  palo.position.set(x, base+1.1, -y); scene.add(palo); m.userData.palo = palo;
+  const pie = new THREE.Mesh(new THREE.CircleGeometry(0.45, 16), new THREE.MeshBasicMaterial({color:0x222222}));
+  pie.rotation.x = -Math.PI/2; pie.position.set(x, base+0.03, -y); pie.renderOrder = 2; scene.add(pie); m.userData.pie = pie;
+  if (s.aprox){ const a = new THREE.Mesh(geoAnillo, new THREE.MeshBasicMaterial({color:0xffffff}));
+    a.rotation.x = -Math.PI/2; a.position.set(x, base+2.2, -y); scene.add(a); m.userData.anillo = a; }
+  if (s.codigo){ const et = document.createElement("div"); et.className = "etiq cod"; et.textContent = s.codigo; cont.appendChild(et);
+    etiquetas.push({el:et, p:s.planta, s, pos:new THREE.Vector3(x, base+3.6, -y)}); }
 });
 // norte
 const etN = document.createElement("div"); etN.className = "etiq norte"; etN.textContent = "N ↑"; cont.appendChild(etN);
@@ -300,10 +314,10 @@ function pintar(){
     
   }));
   volumenes.forEach(v => v.visible = p==="Todas" || p==="Azotea");
-  cajasZona.forEach(z => z.objs.forEach(o => o.visible = p==="Todas" || z.p===p));
   marcadores.forEach(m => {
     const s = m.userData.s, v = visible(s);
-    m.visible = m.userData.palo.visible = v;
+    m.visible = m.userData.palo.visible = m.userData.pie.visible = v;
+    if (m.userData.anillo) m.userData.anillo.visible = v;
     m.scale.setScalar(s===seleccionado ? 1.9 : 1);
     m.material.color.set(css(ESTADOS[s.estado].c));
   });
@@ -328,7 +342,8 @@ const v = new THREE.Vector3();
   requestAnimationFrame(bucle); controles.update(); renderer.render(scene, camara);
   const r = cont.getBoundingClientRect();
   etiquetas.forEach(t => {
-    const on = t.p===null || filtro.planta===t.p;   // en «Todas» los nombres de sala se solapan
+    // en «Todas» los códigos se solapan; solo los de la planta elegida y los visibles
+    const on = t.p===null || (filtro.planta===t.p && (!t.s || visible(t.s)));
     v.copy(t.pos).project(camara);
     const dentro = on && v.z < 1 && Math.abs(v.x) < 1.02 && Math.abs(v.y) < 1.02;
     t.el.style.display = dentro ? "block" : "none";

@@ -2,6 +2,7 @@ import { TriangleAlert } from "lucide-react"
 import { useCallback, useMemo, useState, type ReactNode } from "react"
 
 import { BandaCifras } from "@/components/BandaCifras"
+import { BotonPlano } from "@/components/BotonPlano"
 import { Carrusel } from "@/components/carrusel/Carrusel"
 import { GraficaCarrusel } from "@/components/GraficaCarrusel"
 import { PanelAforo } from "@/components/PanelAforo"
@@ -168,6 +169,7 @@ export default function App() {
 
       <footer className="flex flex-wrap items-center gap-x-[1.4vw] gap-y-2 border-t border-border bg-card/70 px-[calc(var(--u)*2.6)] py-[calc(var(--u)*1.2)] text-[calc(var(--u)*1.4)] font-medium text-muted-foreground backdrop-blur-sm max-[700px]:text-[12px]">
         <span>Fuente: plataforma IoTsens · Palacio de Congresos de Marbella</span>
+        <BotonPlano />
         <span className="flex-1" />
         {totalPaginas > 1 && (
           <span>
